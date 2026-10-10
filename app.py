@@ -24,6 +24,15 @@ st.markdown("""<style>
 .pair{display:flex;gap:10px;margin-top:12px}.prob{flex:1;background:#eef0f5;border-radius:12px;padding:12px 9px;text-align:center}
 .prob strong{display:block;font-size:1.4rem;color:#30333e}.prob small{color:#646a77}
 .pill{display:inline-block;background:#ededee;border-radius:10px;padding:5px 9px;margin:9px 5px 0 0;font-size:.83rem}
+.sr-match{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:6px;margin:5px 0 15px;padding:10px 4px}
+.sr-match-team{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:8px;text-align:center}
+.sr-match-logo{width:58px;height:58px;display:flex;align-items:center;justify-content:center}
+.sr-match-name{font-size:clamp(.83rem,2.8vw,1.04rem);font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.sr-versus{text-align:center;font-size:1.3rem;font-weight:700;color:#858b95}
+.sr-team-heading{display:flex;align-items:center;gap:10px;margin:20px 0 9px;font-size:1.15rem;font-weight:700;line-height:1.3}
+.sr-small-logo{width:36px;height:36px;flex:none;display:flex;align-items:center;justify-content:center}
+.team-logo-fallback{font-size:1.7rem}
+@media(max-width:480px){.sr-match-logo{width:49px;height:49px}.sr-match{gap:4px;padding:7px 0}.sr-team-heading{font-size:1.02rem}}
 </style>""", unsafe_allow_html=True)
 TZ = ZoneInfo("Europe/Berlin")
 LEAGUES = {"Bundesliga":78,"2. Bundesliga":79,"La Liga":140,"Serie A":135,"Premier League":39,"Ligue 1":61,"MLS":253}
@@ -97,23 +106,44 @@ def safe_logo(value):
     return None
 
 
-def team_heading(name,logo,away=False):
-    left,right=st.columns([1,9],vertical_alignment="center")
-    with left:
-        if safe_logo(logo): st.image(logo,width=45)
-        else: st.write("🚌" if away else "🏠")
-    with right: st.markdown("#### "+str(name))
+def logo_html(logo, size=52):
+    """Small, bounded team logo; retain an icon if no logo is provided."""
+    url = safe_logo(logo)
+    if not url:
+        return '<span class="team-logo-fallback">🛡️</span>'
+    return (
+        f'<img src="{html.escape(url, quote=True)}" '
+        f'alt="Vereinslogo" width="{size}" height="{size}" '
+        'style="width:100%;height:100%;object-fit:contain" loading="lazy">'
+    )
 
 
-def match_heading(home_name,home_logo,away_name,away_logo):
-    c1,c2,c3=st.columns([5,1,5],vertical_alignment="center")
-    with c1:
-        if safe_logo(home_logo): st.image(home_logo,width=55)
-        st.markdown("**"+str(home_name)+"**")
-    with c2: st.markdown("**–**")
-    with c3:
-        if safe_logo(away_logo): st.image(away_logo,width=55)
-        st.markdown("**"+str(away_name)+"**")
+def team_heading(name, logo, away=False):
+    """Compact inline logo and name; no stacked Streamlit columns."""
+    label = html.escape(str(name))
+    st.markdown(
+        '<div class="sr-team-heading">'
+        f'<span class="sr-small-logo">{logo_html(logo, 34)}</span>'
+        f'<span>{label}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def match_heading(home_name, home_logo, away_name, away_logo):
+    """Three-column fixture banner that remains side-by-side on iPhone."""
+    st.markdown(
+        '<div class="sr-match">'
+        '<div class="sr-match-team">'
+        f'<span class="sr-match-logo">{logo_html(home_logo)}</span>'
+        f'<span class="sr-match-name">{html.escape(str(home_name))}</span>'
+        '</div>'
+        '<span class="sr-versus">–</span>'
+        '<div class="sr-match-team">'
+        f'<span class="sr-match-logo">{logo_html(away_logo)}</span>'
+        f'<span class="sr-match-name">{html.escape(str(away_name))}</span>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def show_player(player,period_label):
