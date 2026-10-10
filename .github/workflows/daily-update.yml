@@ -2,8 +2,7 @@ name: SportRadar Tagesupdate
 
 on:
   schedule:
-    - cron: '0 8 * * *'
-      timezone: 'Europe/Berlin'
+    - cron: '0 7 * * *'
   workflow_dispatch:
 
 permissions:
