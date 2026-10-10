@@ -23,7 +23,7 @@ jobs:
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
         run: python daily_update.py
-      - name: Aktualisierte Daten speichern
+            - name: Aktualisierte Daten speichern
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -31,3 +31,4 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m 'Automatisches Sportdaten-Update'
             git push
+          fi
