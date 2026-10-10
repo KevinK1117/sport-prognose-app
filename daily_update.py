@@ -152,8 +152,12 @@ def fetch_del_player_stats(season):
                 "Keine Tabelle mit den benötigten Spalten gefunden."
             )
             return None
-
+            
+        print("DEL DEBUG: Erste Tabellenzeilen:")
+        print(selected_table.head(3).to_string(index=False))
+        print("DEL DEBUG: Datentypen:", selected_table.dtypes.to_dict())
         players = []
+        
 
         for _, row in selected_table.iterrows():
             name = clean_value(row.get("Spieler"))
