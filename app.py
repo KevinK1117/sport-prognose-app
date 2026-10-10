@@ -174,9 +174,13 @@ DEL_ALIASES = {
         "Schwenninger Wild Wings",
     ],
     "team_44": [
-        "Frankfurt",
-        "Löwen Frankfurt",
-        "Loewen Frankfurt",
+    "Frankfurt",
+    "Löwen Frankfurt",
+    "Loewen Frankfurt",
+    "Frankfurt Lowen",
+    "Frankfurt Loewen",
+    "Frankfurt Löwen",
+],
     ],
 }
 
