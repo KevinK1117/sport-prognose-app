@@ -21,6 +21,7 @@ jobs:
       - name: Sportdaten aktualisieren
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+          DEL_LEAGUE_ID: ${{ secrets.DEL_LEAGUE_ID }}
         run: python daily_update.py
       - name: Aktualisierte Daten speichern
         run: |
