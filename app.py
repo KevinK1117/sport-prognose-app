@@ -1,5 +1,6 @@
 
 
+
 """SportRadar – football, NHL and DEL goalscorer estimates."""
 
 import html
@@ -91,7 +92,6 @@ LEAGUES = {
     "MLS": 253,
 }
 
-# Verified against the team names in the DEL update log.
 DEL_TEAMS = {
     "team_1": "ERC Ingolstadt",
     "team_2": "Adler Mannheim",
@@ -109,7 +109,6 @@ DEL_TEAMS = {
     "team_44": "Löwen Frankfurt",
 }
 
-# Explicit alternative names for the same clubs.
 DEL_ALIASES = {
     "team_1": [
         "Ingolstadt",
@@ -174,12 +173,12 @@ DEL_ALIASES = {
         "Schwenninger Wild Wings",
     ],
     "team_44": [
-    "Frankfurt",
-    "Löwen Frankfurt",
-    "Loewen Frankfurt",
-    "Frankfurt Lowen",
-    "Frankfurt Loewen",
-    "Frankfurt Löwen",
+        "Frankfurt",
+        "Löwen Frankfurt",
+        "Loewen Frankfurt",
+        "Frankfurt Lowen",
+        "Frankfurt Loewen",
+        "Frankfurt Löwen",
     ],
 }
 
@@ -829,8 +828,6 @@ def del_team_mapping():
                     normalized, set()
                 ).add(team_id)
 
-    # A name is accepted only when it identifies
-    # exactly one known DEL team.
     return {
         name: next(iter(ids))
         for name, ids in candidates.items()
@@ -839,8 +836,6 @@ def del_team_mapping():
 
 
 def identify_del_team(name, mapping):
-    """Exact normalized match or explicit alias only."""
-
     return mapping.get(
         normalize_team(name)
     )
@@ -936,8 +931,6 @@ def del_player_estimates():
 
 
 def del_game_time(match):
-    """Read available game start time safely."""
-
     timestamp = match.get("timestamp")
 
     if isinstance(timestamp, (int, float)):
@@ -1096,8 +1089,62 @@ def del_view(day):
                 "für diese Begegnung"
             )
 
+            # NEW: Select Top 5, Top 10 or all
+            # players separately for each team.
+            selection = st.radio(
+                "Spieler pro Mannschaft anzeigen",
+                ["Top 5", "Top 10", "Alle"],
+                horizontal=True,
+                key=(
+                    f"del_limit_{day}_"
+                    f"{match.get('id', home_id + '_' + away_id)}"
+                ),
+            )
+
+            if selection == "Top 5":
+                limit = 5
+            elif selection == "Top 10":
+                limit = 10
+            else:
+                limit = None
+
+            home_players = [
+                player
+                for player in match_players
+                if player["team_id"] == home_id
+            ]
+
+            away_players = [
+                player
+                for player in match_players
+                if player["team_id"] == away_id
+            ]
+
+            home_players.sort(
+                key=lambda player: player.get("p") or 0,
+                reverse=True,
+            )
+
+            away_players.sort(
+                key=lambda player: player.get("p") or 0,
+                reverse=True,
+            )
+
+            st.markdown(
+                f"#### 🏠 {DEL_TEAMS.get(home_id, home_name)}"
+            )
+
             show_players(
-                match_players[:30],
+                home_players[:limit],
+                "1. Drittel",
+            )
+
+            st.markdown(
+                f"#### 🚌 {DEL_TEAMS.get(away_id, away_name)}"
+            )
+
+            show_players(
+                away_players[:limit],
                 "1. Drittel",
             )
 
