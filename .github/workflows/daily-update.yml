@@ -20,7 +20,7 @@ jobs:
         run: pip install -r requirements.txt
       - name: Sportdaten aktualisieren
         env:
-          API_SPORTS_KEY: $&#123;&#123; secrets.API_SPORTS_KEY &#125;&#125;
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
         run: python daily_update.py
       - name: Aktualisierte Daten speichern
         run: |
