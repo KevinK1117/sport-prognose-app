@@ -1,8 +1,10 @@
 
-"""Update SportRadar fixtures and inspect DEL player statistics."""
+
+"""Update SportRadar fixtures and DEL player statistics daily."""
 
 import json
 import os
+import re
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
 from io import StringIO
@@ -45,8 +47,7 @@ def fetch(url, *, params=None, headers=None):
                 details = response.json()
                 if isinstance(details, dict):
                     details = {
-                        k: v
-                        for k, v in details.items()
+                        k: v for k, v in details.items()
                         if k in (
                             "errors",
                             "message",
@@ -89,34 +90,20 @@ def del_season(date):
     return year if month >= 7 else year - 1
 
 
-def clean_value(value):
-    """Convert pandas values into JSON-safe values."""
-    if pd.isna(value):
-        return None
-
-    if isinstance(value, str):
-        return value.strip()
-
-    if hasattr(value, "item"):
-        return value.item()
-
-    return value
-
-
-class TeamHTMLDebug(HTMLParser):
-    """Inspect image and link attributes in the first HTML table rows."""
+class DELTeamParser(HTMLParser):
+    """Extract team logo identifiers from player statistic rows."""
 
     def __init__(self):
         super().__init__()
         self.in_table = False
-        self.table_depth = 0
         self.in_row = False
-        self.row_count = 0
-        self.debug_count = 0
+        self.current_team = None
+        self.team_ids = []
 
     def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+
         if tag == "table":
-            self.table_depth += 1
             self.in_table = True
 
         if not self.in_table:
@@ -124,49 +111,31 @@ class TeamHTMLDebug(HTMLParser):
 
         if tag == "tr":
             self.in_row = True
-            self.row_count += 1
+            self.current_team = None
 
-        if (
-            self.in_row
-            and self.row_count <= 5
-            and tag in ("img", "a")
-            and self.debug_count < 30
-        ):
-            attributes = dict(attrs)
+        if self.in_row and tag == "img":
+            src = attributes.get("src", "")
 
-            # Print only attributes useful for team identification.
-            useful = {
-                key: value
-                for key, value in attributes.items()
-                if key in (
-                    "alt",
-                    "title",
-                    "href",
-                    "src",
-                    "data-team",
-                    "aria-label",
-                )
-            }
-
-            print(
-                f"DEL TEAM DEBUG: row={self.row_count}, "
-                f"tag={tag}, attrs={str(useful)[:300]}"
+            match = re.search(
+                r"/(team_\d+)\.svg",
+                src,
+                flags=re.IGNORECASE,
             )
 
-            self.debug_count += 1
+            if match:
+                self.current_team = match.group(1)
 
     def handle_endtag(self, tag):
-        if tag == "tr":
+        if tag == "tr" and self.in_row:
+            self.team_ids.append(self.current_team)
             self.in_row = False
 
-        if tag == "table" and self.table_depth:
-            self.table_depth -= 1
-            if self.table_depth == 0:
-                self.in_table = False
+        if tag == "table":
+            self.in_table = False
 
 
 def fetch_del_player_stats(season):
-    """Read and inspect public DEL player statistics."""
+    """Fetch player stats and identify teams from HTML logos."""
 
     season_label = f"{season}-{str(season + 1)[-2:]}"
 
@@ -193,7 +162,6 @@ def fetch_del_player_stats(season):
         tables = pd.read_html(StringIO(response.text))
 
         required_columns = {
-            "Team",
             "Spieler",
             "GP",
             "G",
@@ -218,35 +186,36 @@ def fetch_del_player_stats(season):
             )
             return None
 
-        print(
-            f"DEL DEBUG: Tabellenzeilen={len(selected_table)}"
-        )
+        parser = DELTeamParser()
+        parser.feed(response.text)
+
+        # HTML tables contain a header row before player rows.
+        team_ids = parser.team_ids
+
+        if len(team_ids) == len(selected_table) + 1:
+            team_ids = team_ids[1:]
 
         print(
-            "DEL DEBUG: Erste Tabellenzeilen:"
+            f"DEL Spielerstatistik: "
+            f"Tabellenzeilen={len(selected_table)}, "
+            f"Team-Kennungen={len(team_ids)}"
         )
 
-        print(
-            selected_table.head(3).to_string(index=False)
-        )
-
-        print(
-            "DEL DEBUG: Datentypen:",
-            selected_table.dtypes.to_dict(),
-        )
-
-        # Investigate team information in HTML.
-        print(
-            "DEL TEAM DEBUG: Suche nach Team-Logos und Links"
-        )
-
-        TeamHTMLDebug().feed(response.text)
+        if len(team_ids) != len(selected_table):
+            print(
+                "DEL Spielerstatistik: "
+                "Team-Zuordnung nicht eindeutig. "
+                "Keine Spielerwerte gespeichert."
+            )
+            return None
 
         players = []
 
-        for _, row in selected_table.iterrows():
-            name = clean_value(row.get("Spieler"))
-            team = clean_value(row.get("Team"))
+        for index, (_, row) in enumerate(
+            selected_table.iterrows()
+        ):
+            name = row.get("Spieler")
+            team_id = team_ids[index]
 
             games = pd.to_numeric(
                 row.get("GP"),
@@ -258,24 +227,22 @@ def fetch_del_player_stats(season):
                 errors="coerce",
             )
 
-            if not isinstance(name, str) or not name:
+            if pd.isna(name) or pd.isna(games) or pd.isna(goals):
                 continue
 
-            if not isinstance(team, str) or not team:
+            if not team_id:
                 continue
 
-            if pd.isna(games) or pd.isna(goals):
-                continue
-
+            name = str(name).strip()
             games = int(games)
             goals = int(goals)
 
-            if games < 0 or goals < 0:
+            if not name or games < 0 or goals < 0:
                 continue
 
             player = {
                 "name": name,
-                "team": team,
+                "team_id": team_id,
                 "games": games,
                 "goals": goals,
             }
@@ -287,9 +254,14 @@ def fetch_del_player_stats(season):
                 ("Nat", "nationality"),
             ):
                 if source in selected_table.columns:
-                    value = clean_value(row.get(source))
-                    if value is not None:
-                        player[target] = value
+                    value = row.get(source)
+
+                    if not pd.isna(value):
+                        player[target] = (
+                            value.item()
+                            if hasattr(value, "item")
+                            else str(value)
+                        )
 
             players.append(player)
 
@@ -300,15 +272,22 @@ def fetch_del_player_stats(season):
             )
             return None
 
+        distinct_teams = sorted(
+            set(player["team_id"] for player in players)
+        )
+
         print(
             f"DEL Spielerstatistik: "
             f"{len(players)} Spieler gespeichert"
         )
 
         print(
-            "DEL Spielerstatistik: "
-            f"{len(set(p['team'] for p in players))} "
-            "verschiedene Team-Bezeichnungen"
+            f"DEL Spielerstatistik: "
+            f"{len(distinct_teams)} Team-Kennungen"
+        )
+
+        print(
+            f"DEL Team-Kennungen: {distinct_teams}"
         )
 
         return players
