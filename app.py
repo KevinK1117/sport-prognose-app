@@ -531,6 +531,39 @@ def form_score(stats,sport):
     return round(goals*5 + shots*.15,3)
 
 
+def rank_candidates_by_verified_form(pool,day):
+    """Evaluate each team's top five season candidates using real recent game logs."""
+    teams={}
+    for player in pool:
+        team_key=(player["league"],player["fixture"],str(player.get("team_id") or player["team"]))
+        teams.setdefault(team_key,[]).append(player)
+    football_forms={}
+    evaluated=[]
+    for team_key,players in teams.items():
+        for player in sorted(players,key=lambda p:p.get("p") or 0,reverse=True)[:5]:
+            if player["league"]=="DEL":
+                continue  # No verified DEL player-by-game records available.
+            if player["sport"]=="football":
+                team_id=player.get("team_id")
+                if not team_id or not player.get("player_id"): continue
+                if team_id not in football_forms:
+                    football_forms[team_id]=football_recent_form(team_id,day,secret("API_SPORTS_KEY"))
+                stats=football_forms[team_id].get(player["player_id"])
+            else:
+                stats=nhl_recent_form(player.get("player_id"),day)
+            if not stats: continue
+            score=form_score(stats,player["sport"])
+            if score is not None:
+                evaluated.append({**player,"form":stats,"form_score":score})
+    evaluated.sort(key=lambda p:(p["form_score"],p.get("p") or 0),reverse=True)
+    picks=[]; used=set()
+    for player in evaluated:
+        key=(player["league"],player["fixture"])
+        if key in used: continue
+        picks.append(player); used.add(key)
+    return picks
+
+
 def all_leagues_form_combo(day):
     """One top-5 season candidate per team, ranked by verified last-five form."""
     pool=[]
@@ -539,36 +572,7 @@ def all_leagues_form_combo(day):
     pool.extend(combo_candidates(day,"🏒 Eishockey","NHL"))
     # DEL season aggregates do not include actual last-five game logs.
     # Exclude DEL until a reliable game-by-game source is connected.
-    teams={}
-    for player in pool:
-        team_key=(player["league"],player["fixture"],str(player.get("team_id") or player["team"]))
-        teams.setdefault(team_key,[]).append(player)
-    football_forms={}
-    evaluated=[]
-    for team_key,players in teams.items():
-        top_five=sorted(players,key=lambda p:p.get("p") or 0,reverse=True)[:5]
-        for player in top_five:
-            if player["sport"]=="football":
-                team_id=player.get("team_id")
-                if not team_id or not player.get("player_id"): continue
-                form_key=(team_id,player["league"])
-                if form_key not in football_forms:
-                    football_forms[form_key]=football_recent_form(team_id,day,secret("API_SPORTS_KEY"))
-                stats=football_forms[form_key].get(player["player_id"])
-            else:
-                stats=nhl_recent_form(player.get("player_id"),day)
-            if not stats: continue
-            score=form_score(stats,player["sport"])
-            if score is None: continue
-            evaluated.append({**player,"form":stats,"form_score":score})
-    # One selection per team (from the team's top five) and per fixture.
-    evaluated.sort(key=lambda p:(p["form_score"],p.get("p") or 0),reverse=True)
-    chosen=[]; used_matches=set()
-    for player in evaluated:
-        match_key=(player["league"],player["fixture"])
-        if match_key in used_matches: continue
-        chosen.append(player); used_matches.add(match_key)
-    return chosen
+    return rank_candidates_by_verified_form(pool,day)
 
 
 def render_form_combo(picks):
@@ -605,19 +609,24 @@ def render_combo_picks(picks,requested):
 def combo_view(day,sport,league):
     st.subheader("🎟️ Kombi & Wettschein-Prüfung")
     st.caption("Modellbasierte Torschützen-Kandidaten. Keine sicheren Tipps oder bestätigten Buchmacherquoten.")
-    tab_daily,tab_all,tab_check=st.tabs(["📅 Tages-Kombi","🔥 Große Form-Kombi","🔎 Wettschein prüfen"])
+    tab_daily,tab_all,tab_check=st.tabs(["📅 Form-Tages-Kombi","🔥 Große Form-Kombi","🔎 Wettschein prüfen"])
     with tab_daily:
         amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=6)
         st.caption(f"Auswahl: {league} · {day.strftime('%d.%m.%Y')} · Markt: Spieler erzielt mindestens ein Tor im Gesamtspiel")
-        with st.spinner("Spiele und Spielerstatistiken prüfen …"):
-            pool=combo_candidates(day,sport,league)
-        # Only one player per fixture: multiple goalscorer picks in one match are correlated.
-        picks=[]; used=set()
-        for player in pool:
-            if player["fixture"] in used: continue
-            picks.append(player); used.add(player["fixture"])
-            if len(picks)>=amount: break
-        render_combo_picks(picks,amount)
+        st.caption("Auswahl nach echter Form der letzten fünf Spiele: Tore, Schüsse und beim Fußball Einsatzminuten. Je Begegnung höchstens ein Tipp.")
+        if league=="DEL":
+            st.info("Für DEL liegen noch keine überprüfbaren Einzelspiel-Daten der letzten fünf Spiele vor. Deshalb kann keine echte Form-Tages-Kombi erstellt werden.")
+        else:
+            if st.button("📅 Form-Tages-Kombi berechnen",key=f"daily_form_{day}_{sport}_{league}"):
+                st.session_state["daily_form_request"]=(str(day),sport,league)
+            if st.session_state.get("daily_form_request")== (str(day),sport,league):
+                with st.spinner("Top 5 je Team und tatsächliche letzte fünf Spiele auswerten …"):
+                    pool=combo_candidates(day,sport,league)
+                    ranked=rank_candidates_by_verified_form(pool,day)
+                picks=ranked[:amount]
+                if len(ranked)<amount:
+                    st.warning(f"Nur {len(ranked)} Begegnungen mit überprüfbarer aktueller Form gefunden; keine Tipps werden ergänzt oder erfunden.")
+                render_form_combo(picks)
     with tab_all:
         st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Beste aktuelle Form aus den Top 5 jeder Mannschaft")
         st.caption("Bewertet werden echte Einzelspiele der letzten fünf Partien: Tore, Schüsse und beim Fußball Einsatzminuten. Maximal ein Tipp je Begegnung.")
