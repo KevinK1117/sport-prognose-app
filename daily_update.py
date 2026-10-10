@@ -96,6 +96,11 @@ def test_del_player_stats():
         print(f"DEL Statistiktest: HTTP {response.status_code}")
         print(f"DEL Statistiktest: HTML-Zeichen={len(response.text)}")
         print(f"DEL Statistiktest: Tabellen vorhanden={'<table' in response.text.lower()}")
+        from io import StringIO
+        import pandas as pd
+        tables = pd.read_html(StringIO(response.text))
+        print(f"DEL Statistiktest: Anzahl Tabellen={len(tables)}")
+        print(f"DEL Statistiktest: Spalten={list(tables[0].columns) if tables else []}")
     except requests.RequestException as exc:
         print(f"DEL Statistiktest fehlgeschlagen: {type(exc).__name__}")
 
