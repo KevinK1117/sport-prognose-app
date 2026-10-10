@@ -252,7 +252,7 @@ def football_players(league_id,year,team_id,key):
                 total_goals=goals.get("total") or 0; total_minutes=games.get("minutes")
                 avg_minutes=total_minutes/apps if isinstance(total_minutes,(int,float)) and total_minutes>0 else None
                 ident=player.get("id") or player.get("name")
-                result[ident]={"name":player.get("name") or "Unbekannt","team":team.get("name") or "","goals":total_goals,"games":apps,"shots":shots.get("total"),"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
+                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","goals":total_goals,"games":apps,"shots":shots.get("total"),"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
         if len(rows)<20: break
     return list(result.values())
 
@@ -293,7 +293,7 @@ def nhl_skaters(abbrev):
         goals=item.get("goals") or 0; first=item.get("firstName") or {}; last=item.get("lastName") or {}
         if isinstance(first,dict): first=first.get("default","")
         if isinstance(last,dict): last=last.get("default","")
-        result.append({"name":f"{first} {last}".strip() or "Unbekannt","team":abbrev,"goals":goals,"games":games,"shots":item.get("shots"),"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
+        result.append({"name":f"{first} {last}".strip() or "Unbekannt","player_id":item.get("playerId") or item.get("id"),"team":abbrev,"goals":goals,"games":games,"shots":item.get("shots"),"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
     return result
 
 
@@ -453,10 +453,159 @@ def combo_candidates(day, sport, league):
     return sorted(candidates,key=lambda x:x.get("p") or 0,reverse=True)
 
 
+@st.cache_data(ttl=7200,show_spinner=False)
+def football_recent_fixture_ids(team_id, day, key):
+    """Last five completed fixtures before the chosen day, all competitions."""
+    rows=api("fixtures",{"team":team_id,"last":12,"status":"FT","timezone":"Europe/Berlin"},key=key)
+    if not isinstance(rows,list): return []
+    found=[]
+    for row in rows:
+        fixture=row.get("fixture") or {}
+        try:
+            played=datetime.fromisoformat(str(fixture.get("date","")).replace("Z","+00:00")).date()
+        except ValueError: continue
+        if played<day and fixture.get("id"):
+            found.append((played,fixture["id"]))
+    return [fid for _,fid in sorted(found,reverse=True)[:5]]
+
+
+@st.cache_data(ttl=7200,show_spinner=False)
+def football_fixture_player_stats(fixture_id,key):
+    return api("fixtures/players",{"fixture":fixture_id},key=key)
+
+
+@st.cache_data(ttl=7200,show_spinner=False)
+def football_recent_form(team_id,day,key):
+    """Actual per-game goals/shots/minutes; no form if fewer than 3 game reports."""
+    fixture_ids=football_recent_fixture_ids(team_id,day,key)
+    if len(fixture_ids)<3: return {}
+    records={}
+    for fid in fixture_ids:
+        data=football_fixture_player_stats(fid,key)
+        if not isinstance(data,list): continue
+        for team in data:
+            if (team.get("team") or {}).get("id")!=team_id: continue
+            for row in team.get("players") or []:
+                ident=(row.get("player") or {}).get("id")
+                if not ident: continue
+                stats=(row.get("statistics") or [{}])[0]
+                games=stats.get("games") or {}
+                mins=games.get("minutes")
+                if mins is None or mins<=0: continue
+                goals=(stats.get("goals") or {}).get("total") or 0
+                shots=(stats.get("shots") or {}).get("total") or 0
+                rec=records.setdefault(ident,{"played":0,"goals":0,"shots":0,"minutes":0})
+                rec["played"]+=1; rec["goals"]+=goals; rec["shots"]+=shots; rec["minutes"]+=mins
+    return records
+
+
+@st.cache_data(ttl=7200,show_spinner=False)
+def nhl_recent_form(player_id,day):
+    """NHL official game log; exclude games on/after the prediction day."""
+    if not player_id: return None
+    season_year=day.year if day.month>=7 else day.year-1
+    season_code=f"{season_year}{season_year+1}"
+    payload=nhl(f"player/{player_id}/game-log/{season_code}/2")
+    if not isinstance(payload,dict): return None
+    games=payload.get("gameLog") or []
+    recent=[]
+    for game in games:
+        try: played=datetime.fromisoformat(str(game.get("gameDate",""))[:10]).date()
+        except ValueError: continue
+        if played<day: recent.append(game)
+    recent=sorted(recent,key=lambda row:row.get("gameDate", ""),reverse=True)[:5]
+    if len(recent)<3: return None
+    return {"played":len(recent),"goals":sum(int(g.get("goals") or 0) for g in recent),"shots":sum(int(g.get("shots") or 0) for g in recent),"minutes":None}
+
+
+def form_score(stats,sport):
+    """Rank verified recent performance; scoring is not a betting probability."""
+    n=stats["played"]
+    if n<3: return None
+    goals=stats["goals"]/n
+    shots=stats["shots"]/n
+    if sport=="football":
+        mins=stats.get("minutes") or 0
+        playing=min(1.0,mins/(n*75))
+        return round((goals*5 + shots*.18)*(.6+.4*playing),3)
+    return round(goals*5 + shots*.15,3)
+
+
+def all_leagues_form_combo(day):
+    """One top-5 season candidate per team, ranked by verified last-five form."""
+    pool=[]
+    for competition in LEAGUES:
+        pool.extend(combo_candidates(day,"⚽ Fußball",competition))
+    pool.extend(combo_candidates(day,"🏒 Eishockey","NHL"))
+    # DEL season aggregates do not include actual last-five game logs.
+    # Exclude DEL until a reliable game-by-game source is connected.
+    teams={}
+    for player in pool:
+        team_key=(player["league"],player["fixture"],str(player.get("team_id") or player["team"]))
+        teams.setdefault(team_key,[]).append(player)
+    football_forms={}
+    evaluated=[]
+    for team_key,players in teams.items():
+        top_five=sorted(players,key=lambda p:p.get("p") or 0,reverse=True)[:5]
+        for player in top_five:
+            if player["sport"]=="football":
+                team_id=player.get("team_id")
+                if not team_id or not player.get("player_id"): continue
+                form_key=(team_id,player["league"])
+                if form_key not in football_forms:
+                    football_forms[form_key]=football_recent_form(team_id,day,secret("API_SPORTS_KEY"))
+                stats=football_forms[form_key].get(player["player_id"])
+            else:
+                stats=nhl_recent_form(player.get("player_id"),day)
+            if not stats: continue
+            score=form_score(stats,player["sport"])
+            if score is None: continue
+            evaluated.append({**player,"form":stats,"form_score":score})
+    # One selection per team (from the team's top five) and per fixture.
+    evaluated.sort(key=lambda p:(p["form_score"],p.get("p") or 0),reverse=True)
+    chosen=[]; used_matches=set()
+    for player in evaluated:
+        match_key=(player["league"],player["fixture"])
+        if match_key in used_matches: continue
+        chosen.append(player); used_matches.add(match_key)
+    return chosen
+
+
+def render_form_combo(picks):
+    if not picks:
+        st.info("Keine Kandidaten mit verifizierten Einzelspiel-Daten aus mindestens drei der letzten fünf Spiele gefunden.")
+        return
+    st.success(f"{len(picks)} Spiele mit überprüfbarer aktueller Spielerform ausgewertet.")
+    for index,p in enumerate(picks,1):
+        form=p["form"]
+        st.markdown(f'**{index}. {html.escape(p["name"])}** · {html.escape(p["team"])} · {p["league"]}')
+        st.caption(f'{p["match"]} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse · Formwert {p["form_score"]:.2f} · Saison-Torprognose {pct(p["p"])}')
+    st.metric("Ausgewählte Spiele",len(picks))
+    if len(picks)>1:
+        chance=100*math.prod(p["p"]/100 for p in picks)
+        st.metric("Vereinfachte rechnerische Kombi-Chance",pct(chance))
+    st.warning("Die Form-Rangfolge basiert auf tatsächlichen Einzelspielen, nicht auf einer Garantie. Die Kombi-Chance nutzt separate Saison-Schätzungen und unterstellt vereinfachend unabhängige Ereignisse.")
+
+def render_combo_picks(picks,requested):
+    if not picks:
+        st.info("Keine geeigneten Begegnungen mit ausreichenden Spielerdaten gefunden.")
+        return
+    if len(picks)<requested:
+        st.warning(f"Nur {len(picks)} unterschiedliche geeignete Spiele gefunden. Es werden keine Tipps erfunden.")
+    for i,player in enumerate(picks,1):
+        tier=probability_tier(player["p"],player["sport"])
+        symbol={"high":"🟢","mid":"🟠","low":"⚪"}[tier]
+        st.markdown(f'**{i}. {symbol} {player["name"]}** · {player["team"]} · {player["league"]}')
+        st.caption(f'{player["match"]} · Tor im Gesamtspiel: {pct(player["p"])} · {player["goals"]} Tore in {player["games"]} Spielen')
+    product=math.prod(p["p"]/100 for p in picks)
+    st.metric("Rechnerische Kombi-Chance (vereinfachte Unabhängigkeitsannahme)",pct(product*100))
+    st.warning("Die Gesamtchance ist nur eine Modellschätzung. Die Tipps sind nicht sicher; Form, Aufstellung, Gegner und Abhängigkeiten zwischen Ereignissen können die Prognose verändern.")
+
+
 def combo_view(day,sport,league):
     st.subheader("🎟️ Kombi & Wettschein-Prüfung")
     st.caption("Modellbasierte Torschützen-Kandidaten. Keine sicheren Tipps oder bestätigten Buchmacherquoten.")
-    tab_daily,tab_check=st.tabs(["📅 Tages-Kombi","🔎 Wettschein prüfen"])
+    tab_daily,tab_all,tab_check=st.tabs(["📅 Tages-Kombi","🔥 Große Form-Kombi","🔎 Wettschein prüfen"])
     with tab_daily:
         amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=6)
         st.caption(f"Auswahl: {league} · {day.strftime('%d.%m.%Y')} · Markt: Spieler erzielt mindestens ein Tor im Gesamtspiel")
@@ -468,19 +617,17 @@ def combo_view(day,sport,league):
             if player["fixture"] in used: continue
             picks.append(player); used.add(player["fixture"])
             if len(picks)>=amount: break
-        if not picks:
-            st.info("Heute sind für diese Liga keine geeigneten Begegnungen mit ausreichenden Spielerdaten vorhanden.")
-        else:
-            if len(picks)<amount:
-                st.warning(f"Nur {len(picks)} unterschiedliche Spiele mit ausreichenden Daten. Es werden keine Tipps erfunden.")
-            for i,player in enumerate(picks,1):
-                tier=probability_tier(player["p"],player["sport"])
-                symbol={"high":"🟢","mid":"🟠","low":"⚪"}[tier]
-                st.markdown(f'**{i}. {symbol} {player["name"]}** · {player["team"]} · {player["league"]}')
-                st.caption(f'{player["match"]} · Tor im Gesamtspiel: {pct(player["p"])} · {player["goals"]} Tore in {player["games"]} Spielen')
-            product=math.prod(p["p"]/100 for p in picks)
-            st.metric("Rechnerische Kombi-Chance (vereinfachte Unabhängigkeitsannahme)",pct(product*100))
-            st.warning("Eine 6–10er-Torschützenkombi hat oft eine sehr geringe Gesamttrefferchance. Die Modellwerte sind unsicher, Ereignisse können zusammenhängen und es liegen keine echten Wettquoten vor.")
+        render_combo_picks(picks,amount)
+    with tab_all:
+        st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Beste aktuelle Form aus den Top 5 jeder Mannschaft")
+        st.caption("Bewertet werden echte Einzelspiele der letzten fünf Partien: Tore, Schüsse und beim Fußball Einsatzminuten. Maximal ein Tipp je Begegnung.")
+        st.info("DEL: Die vorhandenen DEL-Daten enthalten nur Saisonwerte, keine überprüfbaren letzten fünf Einzelspiele. DEL wird hier deshalb vorerst nicht als aktuelle Form ausgegeben.")
+        if st.button("🔥 Große Form-Kombi für diesen Tag berechnen",key=f"form_{day}"):
+            st.session_state["form_day"]=str(day)
+        if st.session_state.get("form_day")==str(day):
+            with st.spinner("Echte Einzelspiel-Statistiken abrufen und Form bewerten … Dies kann mehrere Minuten dauern und API-Kontingent verbrauchen."):
+                picks=all_leagues_form_combo(day)
+            render_form_combo(picks)
     with tab_check:
         st.write("Prüfe einen fremden oder eigenen Tipp anhand der SportRadar-Statistik. Anbieterquoten werden **nicht automatisch abgerufen**.")
         provider=st.selectbox("Buchmacher",["Tipico","bet365","Winamax","Pinnacle","Andere"])
