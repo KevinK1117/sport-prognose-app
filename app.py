@@ -18,18 +18,30 @@ import streamlit as st
 
 st.set_page_config(page_title="SportRadar | Torprognosen", page_icon="🎯", layout="wide")
 st.markdown("""<style>
+/* SportRadar: subtle, mobile-friendly color accents */
+:root{--sr-navy:#17324b;--sr-teal:#087e80;--sr-coral:#e56854;--sr-pale:#eaf5f4}
+[data-testid="stAppViewContainer"]{background:linear-gradient(180deg,#f0f7fa 0px,#ffffff 320px)}
+.block-container>div:first-child h1{color:var(--sr-navy);letter-spacing:-.025em}
+[data-testid="stExpander"]{border:1px solid #d9e6ec!important;border-radius:17px!important;background:#fff;overflow:hidden;box-shadow:0 3px 12px rgba(23,50,75,.045)}
+[data-testid="stExpander"] summary{background:#f2f7fa}
+[data-testid="stExpander"] summary:hover{background:#e9f3f7}
+.stButton>button{border-radius:11px;border-color:#9bc8c9;color:#075c62;font-weight:600}
+.stButton>button:hover{border-color:var(--sr-teal);color:var(--sr-teal)}
+[data-testid="stAlert"]{border-radius:13px}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"]{background-color:var(--sr-teal)}
+[data-testid="stTabs"] button[aria-selected="true"]{color:var(--sr-teal)}
 .block-container{max-width:1050px;padding-top:1.2rem}
-.player{background:#fafafa;border:1px solid #d8d8dc;border-radius:18px;padding:15px;margin:10px 0;color:#30333e}
-.player-head{font-weight:700;font-size:1.08rem}.muted{color:#777b85;font-size:.88rem}
-.pair{display:flex;gap:10px;margin-top:12px}.prob{flex:1;background:#eef0f5;border-radius:12px;padding:12px 9px;text-align:center}
-.prob strong{display:block;font-size:1.4rem;color:#30333e}.prob small{color:#646a77}
-.pill{display:inline-block;background:#ededee;border-radius:10px;padding:5px 9px;margin:9px 5px 0 0;font-size:.83rem}
-.sr-match{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:6px;margin:5px 0 15px;padding:10px 4px}
+.player{background:linear-gradient(135deg,#fff 0%,#f6fafc 100%);border:1px solid #d8e6ed;border-left:4px solid #087e80;border-radius:18px;padding:15px;margin:10px 0;color:#263747;box-shadow:0 2px 8px rgba(23,50,75,.035)}
+.player-head{font-weight:700;font-size:1.08rem;color:#17324b}.muted{color:#777b85;font-size:.88rem}
+.pair{display:flex;gap:10px;margin-top:12px}.prob{flex:1;background:#eaf5f4;border-radius:12px;padding:12px 9px;text-align:center}
+.prob strong{display:block;font-size:1.4rem;color:#075f66}.prob small{color:#646a77}
+.pill{display:inline-block;background:#e9f0f5;border-radius:10px;padding:5px 9px;margin:9px 5px 0 0;font-size:.83rem}
+.sr-match{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);align-items:center;gap:6px;margin:5px 0 15px;padding:14px 7px;border-radius:14px;background:linear-gradient(100deg,#edf6fa,#f5faf9)}
 .sr-match-team{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:8px;text-align:center}
 .sr-match-logo{width:58px;height:58px;display:flex;align-items:center;justify-content:center}
-.sr-match-name{font-size:clamp(.83rem,2.8vw,1.04rem);font-weight:700;line-height:1.3;overflow-wrap:anywhere}
-.sr-versus{text-align:center;font-size:1.3rem;font-weight:700;color:#858b95}
-.sr-team-heading{display:flex;align-items:center;gap:10px;margin:20px 0 9px;font-size:1.15rem;font-weight:700;line-height:1.3}
+.sr-match-name{font-size:clamp(.83rem,2.8vw,1.04rem);color:#17324b;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.sr-versus{text-align:center;font-size:1.3rem;font-weight:700;color:#e56854}
+.sr-team-heading{display:flex;align-items:center;gap:10px;margin:20px 0 9px;font-size:1.15rem;font-weight:700;line-height:1.3;color:#17324b}
 .sr-small-logo{width:36px;height:36px;flex:none;display:flex;align-items:center;justify-content:center}
 .team-logo-fallback{font-size:1.7rem}
 @media(max-width:480px){.sr-match-logo{width:49px;height:49px}.sr-match{gap:4px;padding:7px 0}.sr-team-heading{font-size:1.02rem}}
@@ -265,7 +277,7 @@ def nhl_view(day):
         try: time=datetime.fromisoformat(game.get("startTimeUTC","").replace("Z","+00:00")).astimezone(TZ).strftime("%H:%M")
         except (ValueError,TypeError): time="–"
         home_name=nhl_team_name(home); away_name=nhl_team_name(away)
-        with st.expander(f'🏒 {time} Uhr · {away_name} @ {home_name}',expanded=True):
+        with st.expander(f'🏒 {time} Uhr · {home_name} – {away_name}',expanded=True):
             match_heading(home_name,home.get("logo"),away_name,away.get("logo"))
             st.caption("1. Drittel: angenommene gleichmäßige Torintensität über drei Drittel.")
             hp=nhl_skaters(home.get("abbrev")) if home.get("abbrev") else None
