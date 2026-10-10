@@ -410,8 +410,109 @@ def del_view(day):
         st.dataframe(pd.DataFrame([{"Kennung":tid,"Mannschaft":name,"Spieler mit Saisonspielen":sum(p["team_id"]==tid for p in players)} for tid,name in DEL_TEAMS.items()]),hide_index=True,use_container_width=True)
 
 
+def combo_candidates(day, sport, league):
+    """Use only players from fixtures scheduled for the selected date."""
+    candidates=[]
+    if sport.startswith("⚽"):
+        year=season(day,league)
+        games=fixtures_for("football",day,league)
+        if games is None:
+            games=api("fixtures",{"league":LEAGUES[league],"season":year,"date":day.isoformat(),"timezone":"Europe/Berlin"},key=secret("API_SPORTS_KEY"))
+        for game in (games or []):
+            teams=game.get("teams") or {}
+            home=teams.get("home") or {}; away=teams.get("away") or {}
+            fixture_id=(game.get("fixture") or {}).get("id")
+            for team in (home,away):
+                players=football_players(LEAGUES[league],year,team.get("id"),secret("API_SPORTS_KEY")) if secret("API_SPORTS_KEY") else []
+                for player in (players or []):
+                    if player.get("games",0)>=3 and player.get("p") is not None:
+                        candidates.append({**player,"sport":"football","league":league,"match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(fixture_id or f'{home.get("id")}-{away.get("id")}')})
+    elif league=="NHL":
+        games=fixtures_for("nhl",day)
+        if games is None: games=nhl("score/"+day.isoformat())
+        for game in (games or {}).get("games",[]):
+            home=game.get("homeTeam") or {}; away=game.get("awayTeam") or {}
+            for team in (home,away):
+                players=nhl_skaters(team.get("abbrev")) if team.get("abbrev") else []
+                for player in (players or []):
+                    if player.get("games",0)>=3 and player.get("p") is not None:
+                        candidates.append({**player,"sport":"hockey","league":"NHL","match":f'{nhl_team_name(home)} – {nhl_team_name(away)}',"fixture":str(game.get("id") or f'{home.get("abbrev")}-{away.get("abbrev")}')})
+    else:
+        games=fixtures_for("del",day)
+        if games is None: games=api("games",{"league":secret("DEL_LEAGUE_ID") or "19","season":season(day,"DEL"),"date":day.isoformat(),"timezone":"Europe/Berlin"},provider="hockey",key=secret("API_SPORTS_KEY"))
+        mapping=del_team_mapping()
+        players=del_player_estimates()
+        for game in (games or []):
+            teams=game.get("teams") or {}
+            home=teams.get("home") or {}; away=teams.get("away") or {}
+            home_id=mapping.get(normalize_team(home.get("name")))
+            away_id=mapping.get(normalize_team(away.get("name")))
+            for player in players:
+                if player.get("team_id") in (home_id,away_id) and player.get("games",0)>=3:
+                    candidates.append({**player,"sport":"hockey","league":"DEL","match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(game.get("id") or f'{home_id}-{away_id}')})
+    return sorted(candidates,key=lambda x:x.get("p") or 0,reverse=True)
+
+
+def combo_view(day,sport,league):
+    st.subheader("🎟️ Kombi & Wettschein-Prüfung")
+    st.caption("Modellbasierte Torschützen-Kandidaten. Keine sicheren Tipps oder bestätigten Buchmacherquoten.")
+    tab_daily,tab_check=st.tabs(["📅 Tages-Kombi","🔎 Wettschein prüfen"])
+    with tab_daily:
+        amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=6)
+        st.caption(f"Auswahl: {league} · {day.strftime('%d.%m.%Y')} · Markt: Spieler erzielt mindestens ein Tor im Gesamtspiel")
+        with st.spinner("Spiele und Spielerstatistiken prüfen …"):
+            pool=combo_candidates(day,sport,league)
+        # Only one player per fixture: multiple goalscorer picks in one match are correlated.
+        picks=[]; used=set()
+        for player in pool:
+            if player["fixture"] in used: continue
+            picks.append(player); used.add(player["fixture"])
+            if len(picks)>=amount: break
+        if not picks:
+            st.info("Heute sind für diese Liga keine geeigneten Begegnungen mit ausreichenden Spielerdaten vorhanden.")
+        else:
+            if len(picks)<amount:
+                st.warning(f"Nur {len(picks)} unterschiedliche Spiele mit ausreichenden Daten. Es werden keine Tipps erfunden.")
+            for i,player in enumerate(picks,1):
+                tier=probability_tier(player["p"],player["sport"])
+                symbol={"high":"🟢","mid":"🟠","low":"⚪"}[tier]
+                st.markdown(f'**{i}. {symbol} {player["name"]}** · {player["team"]} · {player["league"]}')
+                st.caption(f'{player["match"]} · Tor im Gesamtspiel: {pct(player["p"])} · {player["goals"]} Tore in {player["games"]} Spielen')
+            product=math.prod(p["p"]/100 for p in picks)
+            st.metric("Rechnerische Kombi-Chance (vereinfachte Unabhängigkeitsannahme)",pct(product*100))
+            st.warning("Eine 6–10er-Torschützenkombi hat oft eine sehr geringe Gesamttrefferchance. Die Modellwerte sind unsicher, Ereignisse können zusammenhängen und es liegen keine echten Wettquoten vor.")
+    with tab_check:
+        st.write("Prüfe einen fremden oder eigenen Tipp anhand der SportRadar-Statistik. Anbieterquoten werden **nicht automatisch abgerufen**.")
+        provider=st.selectbox("Buchmacher",["Tipico","bet365","Winamax","Pinnacle","Andere"])
+        st.caption("Anbieterwahl dient nur der Zuordnung; kein Zugriff auf fremde Konten oder Wettscheine.")
+        with st.form("check_ticket"):
+            name=st.text_input("Spielername (Tor im Gesamtspiel)",placeholder="z. B. David Pastrnak")
+            quote=st.number_input("Dezimalquote",min_value=1.01,max_value=1000.0,value=2.00,step=0.05)
+            submitted=st.form_submit_button("🔎 Tipp prüfen")
+        if submitted:
+            if not name.strip():
+                st.error("Bitte einen Spielernamen eingeben.")
+            else:
+                with st.spinner("Spieler in den heutigen Begegnungen suchen …"):
+                    pool=combo_candidates(day,sport,league)
+                matches=[p for p in pool if name.casefold().strip() in p["name"].casefold()]
+                if not matches:
+                    st.info("Spieler in den heutigen Begegnungen dieser Liga nicht gefunden. Bitte Liga, Datum und Schreibweise prüfen.")
+                else:
+                    chosen=matches[0]
+                    implied=100/quote
+                    st.markdown(f'**{chosen["name"]} · {chosen["match"]}**')
+                    col1,col2=st.columns(2)
+                    col1.metric("SportRadar-Schätzung",pct(chosen["p"]))
+                    col2.metric("Quote impliziert ca.",pct(implied))
+                    st.caption(f'{provider}: manuell eingegebene Quote {quote:.2f} · Differenz: {chosen["p"]-implied:+.1f} Prozentpunkte')
+                    st.info("Eine positive Differenz beweist keinen Vorteil: Modellfehler, Marge, Aufstellung und Spielbedingungen können das Ergebnis verändern.")
+        st.caption("Screenshot-Erkennung und Live-Quotenvergleich sind in dieser Version nicht enthalten.")
+
+
 st.title("🎯 SportRadar – Torschützen heute & morgen")
 st.caption("Deutsche Zeit · Saison automatisch · Poisson-Modell mit Stichproben-Glättung")
+page=st.radio("Bereich",["🎯 Torprognosen","🎟️ Kombi & Prüfung"],horizontal=True)
 sport=st.radio("Sportart",["🏒 Eishockey","⚽ Fußball"],horizontal=True)
 leagues=["NHL","DEL"] if sport.startswith("🏒") else list(LEAGUES)
 league=st.selectbox("Liga",leagues)
@@ -427,7 +528,9 @@ if snapshot.get("updated_at"):
 else: st.caption("🕗 Noch kein täglicher Snapshot vorhanden")
 if st.button("🔄 Daten neu laden"):
     st.cache_data.clear(); st.rerun()
-if sport.startswith("🏒"):
+if page.startswith("🎟️"):
+    combo_view(day,sport,league)
+elif sport.startswith("🏒"):
     if league=="NHL": nhl_view(day)
     else: del_view(day)
 else: football_view(day,league)
