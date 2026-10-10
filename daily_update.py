@@ -6,7 +6,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 import requests
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / 'data' / 'daily_fixtures.json'
 TZ = ZoneInfo('Europe/Berlin')
 LEAGUES = {'Bundesliga':78,'2. Bundesliga':79,'La Liga':140,'Serie A':135,'Premier League':39,'Ligue 1':61,'MLS':253}
