@@ -72,7 +72,7 @@ def main():
             if DEL_ID:
                 obj = fetch(
                     "https://v1.hockey.api-sports.io/games",
-                    params={"league": DEL_ID, "date": date, "timezone": "Europe/Berlin"},
+                    params={"league": DEL_ID, "season": int(date[:4]) if int(date[5:7]) >= 7 else int(date[:4]) - 1, "date": date, "timezone": "Europe/Berlin"},
                     headers=headers,
                 )
                 if obj is not None:
