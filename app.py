@@ -32,6 +32,18 @@ st.markdown("""<style>
 [data-testid="stTabs"] button[aria-selected="true"]{color:var(--sr-teal)}
 .block-container{max-width:1050px;padding-top:1.2rem}
 .player{background:linear-gradient(135deg,#fff 0%,#f6fafc 100%);border:1px solid #d8e6ed;border-left:4px solid #087e80;border-radius:18px;padding:15px;margin:10px 0;color:#263747;box-shadow:0 2px 8px rgba(23,50,75,.035)}
+.player.sr-high{border-left-color:#18855b}
+.player.sr-mid{border-left-color:#e69a36}
+.player.sr-low{border-left-color:#98a4b1}
+.player.sr-high .prob{background:#e5f5eb}
+.player.sr-high .prob strong{color:#146b49}
+.player.sr-mid .prob{background:#fff1dc}
+.player.sr-mid .prob strong{color:#9a5b10}
+.player.sr-low .prob{background:#edf1f5}
+.player.sr-low .prob strong{color:#536274}
+.sr-risk-key{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px}
+.sr-risk-key span{font-size:.8rem;border-radius:999px;padding:5px 9px;background:#f3f5f7;color:#344357}
+.sr-risk-key .sr-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 .player-head{font-weight:700;font-size:1.08rem;color:#17324b}.muted{color:#777b85;font-size:.88rem}
 .pair{display:flex;gap:10px;margin-top:12px}.prob{flex:1;background:#eaf5f4;border-radius:12px;padding:12px 9px;text-align:center}
 .prob strong{display:block;font-size:1.4rem;color:#075f66}.prob small{color:#646a77}
@@ -158,21 +170,45 @@ def match_heading(home_name, home_logo, away_name, away_logo):
     )
 
 
-def show_player(player,period_label):
+def probability_tier(value, sport):
+    """Presentation-only tiers, based on the full-game estimate."""
+    if value is None:
+        return "low"
+    high, medium = (30, 15) if sport == "football" else (25, 10)
+    if value >= high:
+        return "high"
+    if value >= medium:
+        return "mid"
+    return "low"
+
+
+def show_probability_legend(sport):
+    high, medium = (30, 15) if sport == "football" else (25, 10)
+    st.markdown(
+        '<div class="sr-risk-key">'
+        f'<span><i class="sr-dot" style="background:#98a4b1"></i>Unter {medium} %</span>'
+        f'<span><i class="sr-dot" style="background:#e69a36"></i>{medium}–{high-0.1:.1f} %</span>'
+        f'<span><i class="sr-dot" style="background:#18855b"></i>Ab {high} %</span>'
+        '</div>', unsafe_allow_html=True
+    )
+
+
+def show_player(player,period_label,sport="hockey"):
+    tier=probability_tier(player.get("p"),sport)
     name=html.escape(str(player["name"])); team=html.escape(str(player["team"]))
     pills=[f'{player["goals"]} Tore',f'{player["games"]} Spiele']
     if player.get("shots") is not None: pills.append(f'{player["shots"]} Schüsse')
     if player.get("minutes") is not None: pills.append(f'{player["minutes"]:.0f} Min Ø')
     chips="".join('<span class="pill">'+html.escape(str(item))+"</span>" for item in pills)
-    st.markdown(f'''<div class="player"><div class="player-head">{name}</div><div class="muted">{team}</div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div>{chips}</div></div>''',unsafe_allow_html=True)
+    st.markdown(f'''<div class="player sr-{tier}"><div class="player-head">{name}</div><div class="muted">{team}</div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div>{chips}</div></div>''',unsafe_allow_html=True)
 
 
-def show_players(players,period_label):
+def show_players(players,period_label,sport="hockey"):
     if not players:
         st.info("Keine verlässlichen Spielerstatistiken verfügbar."); return
     tab1,tab2=st.tabs(["🎯 Spielerprognosen","📊 Tabelle"])
     with tab1:
-        for p in players: show_player(p,period_label)
+        for p in players: show_player(p,period_label,sport)
     with tab2:
         table=[]
         for p in players:
@@ -186,15 +222,16 @@ def selection_limit(key):
     return {"Top 5":5,"Top 10":10,"Alle":None}[choice]
 
 
-def show_match_teams(home_name,home_logo,home_players,away_name,away_logo,away_players,period_label,widget_key):
+def show_match_teams(home_name,home_logo,home_players,away_name,away_logo,away_players,period_label,widget_key,sport="hockey"):
     """Same layout across all sports; top N for EACH team."""
     limit=selection_limit(widget_key)
+    show_probability_legend(sport)
     home_players=sorted(home_players,key=lambda p:p.get("p") or 0,reverse=True)
     away_players=sorted(away_players,key=lambda p:p.get("p") or 0,reverse=True)
     team_heading(home_name,home_logo)
-    show_players(home_players[:limit],period_label)
+    show_players(home_players[:limit],period_label,sport)
     team_heading(away_name,away_logo,away=True)
-    show_players(away_players[:limit],period_label)
+    show_players(away_players[:limit],period_label,sport)
 
 
 @st.cache_data(ttl=3600,show_spinner=False)
@@ -242,7 +279,7 @@ def football_view(day,league):
                 hp=football_players(LEAGUES[league],year,home.get("id"),key)
                 ap=football_players(LEAGUES[league],year,away.get("id"),key)
             if hp is None or ap is None: st.warning("Spielerstatistiken nicht vollständig verfügbar."); continue
-            show_match_teams(home.get("name","Heim"),home.get("logo"),hp,away.get("name","Gast"),away.get("logo"),ap,"1. Halbzeit",f'football_{league}_{day}_{fixture.get("id",home.get("id"))}')
+            show_match_teams(home.get("name","Heim"),home.get("logo"),hp,away.get("name","Gast"),away.get("logo"),ap,"1. Halbzeit",f'football_{league}_{day}_{fixture.get("id",home.get("id"))}',sport="football")
 
 
 @st.cache_data(ttl=3600,show_spinner=False)
