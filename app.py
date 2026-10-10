@@ -180,7 +180,6 @@ DEL_ALIASES = {
     "Frankfurt Lowen",
     "Frankfurt Loewen",
     "Frankfurt Löwen",
-],
     ],
 }
 
