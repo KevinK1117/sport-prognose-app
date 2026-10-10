@@ -85,7 +85,20 @@ def main():
     TARGET.write_text(json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     actual_matches = sum(len(items) for items in snapshot["football"].values())
     print(f"Updated {TARGET}: {now.isoformat()}, NHL dates={len(snapshot['nhl'])}, football entries={len(snapshot['football'])}, football matches={actual_matches}")
-
+def test_del_player_stats():
+    url = "https://www.penny-del.org/statistik/saison-2026-27/hauptrunde/playerstats/basis"
+    try:
+        response = requests.get(
+            url,
+            timeout=25,
+            headers={"User-Agent": "Mozilla/5.0 SportRadar/1.0"},
+        )
+        print(f"DEL Statistiktest: HTTP {response.status_code}")
+        print(f"DEL Statistiktest: HTML-Zeichen={len(response.text)}")
+        print(f"DEL Statistiktest: Tabellen vorhanden={'<table' in response.text.lower()}")
+    except requests.RequestException as exc:
+        print(f"DEL Statistiktest fehlgeschlagen: {type(exc).__name__}")
 
 if __name__ == "__main__":
     main()
+    test_del_player_stats()
