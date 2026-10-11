@@ -89,5 +89,12 @@
     "league": "NHL",
     "player_id": 8480009,
     "team_id": null
+  },
+  "NHL:8481032:Paul Cotter": {
+    "name": "Paul Cotter",
+    "team": "VAN",
+    "league": "NHL",
+    "player_id": 8481032,
+    "team_id": null
   }
 }
