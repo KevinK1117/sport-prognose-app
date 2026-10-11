@@ -1282,9 +1282,150 @@ def combo_view(day,sport,league):
         st.caption("Screenshot-Erkennung und Live-Quotenvergleich sind in dieser Version nicht enthalten.")
 
 
+# Live scoreboard: fetch fresh results separately from the daily fixture snapshot.
+@st.cache_data(ttl=45, show_spinner=False)
+def live_football_fixtures(league_id, year, date, key):
+    return api("fixtures", {"league": league_id, "season": year, "date": date,
+                            "timezone": "Europe/Berlin"}, key=key)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def live_football_scorers(fixture_id, key):
+    rows=api("fixtures/events", {"fixture": fixture_id}, key=key)
+    if not isinstance(rows,list): return None
+    goals=[]
+    for row in rows:
+        if row.get("type")!="Goal": continue
+        detail=str(row.get("detail") or "")
+        if detail.lower() in ("missed penalty", "penalty missed"): continue
+        person=(row.get("player") or {}).get("name") or "Unbekannt"
+        team=(row.get("team") or {}).get("name") or ""
+        minute=(row.get("time") or {}).get("elapsed")
+        extra=(row.get("time") or {}).get("extra")
+        clock=f"{minute}+{extra}'" if extra else f"{minute}'" if minute is not None else ""
+        label=" (Eigentor)" if "own goal" in detail.lower() else " (Elfmeter)" if "penalty" in detail.lower() else ""
+        goals.append(f"⚽ {clock} {person} · {team}{label}")
+    return goals
+
+
+@st.cache_data(ttl=45, show_spinner=False)
+def live_nhl_scores(date):
+    return nhl("score/"+date)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def live_nhl_scorers(game_id):
+    payload=nhl(f"gamecenter/{game_id}/landing")
+    if not isinstance(payload,dict): return None
+    scoring=((payload.get("summary") or {}).get("scoring") or [])
+    out=[]
+    for period in scoring:
+        number=(period.get("periodDescriptor") or {}).get("number")
+        for goal in period.get("goals") or []:
+            scorer=goal.get("name") or goal.get("scorerName") or ""
+            if isinstance(scorer,dict): scorer=scorer.get("default") or ""
+            if not scorer:
+                scorer=((goal.get("scorer") or {}).get("name") if isinstance(goal.get("scorer"),dict) else "") or "Unbekannt"
+            time=goal.get("timeInPeriod") or ""
+            team=goal.get("teamAbbrev") or ""
+            out.append(f"🏒 {number or '?'}D {time} · {scorer} ({team})")
+    return out
+
+
+@st.cache_data(ttl=45, show_spinner=False)
+def live_del_games(date, key, league_id):
+    return api("games", {"league": league_id, "date": date,
+                         "timezone": "Europe/Berlin"}, provider="hockey", key=key)
+
+
+def live_view(day):
+    st.subheader("🔴 Live-Ergebnisse & Torschützen")
+    st.caption("Live-Abfrage beim jeweiligen Datenanbieter · Uhrzeiten in Deutschland · automatische Aktualisierung nur beim Neuladen")
+    selected=st.multiselect("Ligen anzeigen",list(LEAGUES)+["NHL","DEL"],default=list(LEAGUES)+["NHL","DEL"],key="live_leagues")
+    only_live=st.checkbox("Nur laufende Spiele",value=False,key="live_only_running")
+    if st.button("🔄 Live-Spielstände aktualisieren",key="live_refresh"):
+        live_football_fixtures.clear(); live_football_scorers.clear()
+        live_nhl_scores.clear(); live_nhl_scorers.clear(); live_del_games.clear()
+        st.rerun()
+    date=day.isoformat(); key=secret("API_SPORTS_KEY")
+    found=0
+    for league in selected:
+        with st.expander(f"{'⚽' if league in LEAGUES else '🏒'} {league}",expanded=True):
+            if league in LEAGUES:
+                if not key:
+                    st.warning("API_SPORTS_KEY fehlt."); continue
+                games=live_football_fixtures(LEAGUES[league],season(day,league),date,key)
+                if games is None:
+                    st.warning("Live-Ergebnisse derzeit nicht abrufbar."); continue
+                for game in sorted(games,key=lambda g:(g.get("fixture") or {}).get("timestamp") or 0):
+                    fixture=game.get("fixture") or {}; teams=game.get("teams") or {}
+                    home=(teams.get("home") or {}).get("name") or "Heim"
+                    away=(teams.get("away") or {}).get("name") or "Gast"
+                    status=(fixture.get("status") or {}).get("short") or "?"
+                    running=status in ("1H","2H","HT","ET","BT","P","LIVE","INT")
+                    finished=status in ("FT","AET","PEN")
+                    if only_live and not running: continue
+                    found+=1
+                    goals=game.get("goals") or {}
+                    score=f"{goals.get('home') if goals.get('home') is not None else '–'} : {goals.get('away') if goals.get('away') is not None else '–'}"
+                    elapsed=(fixture.get("status") or {}).get("elapsed")
+                    state=f"🔴 {elapsed}'" if running and elapsed is not None else ("🔴 Live" if running else "✅ Ende" if finished else "⏳ "+str(status))
+                    st.markdown(f"**{html.escape(str(home))} {score} {html.escape(str(away))}** · {state}")
+                    if (running or finished) and fixture.get("id"):
+                        scorers=live_football_scorers(fixture["id"],key)
+                        if scorers is None: st.caption("Torschützen momentan nicht abrufbar")
+                        elif scorers:
+                            for scorer in scorers: st.caption(scorer)
+                        elif any(isinstance(goals.get(side),int) and goals[side]>0 for side in ("home","away")):
+                            st.caption("Torschützen noch nicht gemeldet")
+                if not games: st.caption("Heute keine Begegnungen")
+            elif league=="NHL":
+                payload=live_nhl_scores(date)
+                if not isinstance(payload,dict):
+                    st.warning("NHL-Ergebnisse nicht verfügbar."); continue
+                games=payload.get("games") or []
+                for game in games:
+                    state=str(game.get("gameState") or "").upper()
+                    running=state in ("LIVE","CRIT")
+                    finished=state in ("FINAL","OFF")
+                    if only_live and not running: continue
+                    found+=1
+                    home=game.get("homeTeam") or {}; away=game.get("awayTeam") or {}
+                    hs=home.get("score"); ass=away.get("score")
+                    score=f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}"
+                    st.markdown(f"**{html.escape(nhl_team_name(home))} {score} {html.escape(nhl_team_name(away))}** · {'🔴 Live' if running else '✅ Ende' if finished else '⏳ Geplant'}")
+                    if (running or finished) and game.get("id"):
+                        scorers=live_nhl_scorers(game["id"])
+                        if scorers is None: st.caption("Torschützen momentan nicht abrufbar")
+                        elif scorers:
+                            for scorer in scorers: st.caption(scorer)
+                        elif (hs or 0)+(ass or 0)>0: st.caption("Torschützen noch nicht gemeldet")
+                if not games: st.caption("Heute keine Begegnungen")
+            else:
+                if not key:
+                    st.warning("API_SPORTS_KEY fehlt."); continue
+                games=live_del_games(date,key,secret("DEL_LEAGUE_ID") or "19")
+                if games is None:
+                    st.warning("DEL-Ergebnisse nicht verfügbar."); continue
+                for game in games:
+                    raw=game.get("status") or {}
+                    status=str(raw.get("short") or raw.get("long") or "") if isinstance(raw,dict) else str(raw)
+                    running=status.upper() in ("1P","2P","3P","OT","PEN","LIVE")
+                    if only_live and not running: continue
+                    found+=1
+                    teams=game.get("teams") or {}; home=(teams.get("home") or {}).get("name") or "Heim"; away=(teams.get("away") or {}).get("name") or "Gast"
+                    scores=game.get("scores") or {}
+                    hs=(scores.get("home") or {}).get("total") if isinstance(scores.get("home"),dict) else scores.get("home")
+                    ass=(scores.get("away") or {}).get("total") if isinstance(scores.get("away"),dict) else scores.get("away")
+                    st.markdown(f"**{html.escape(str(home))} {hs if hs is not None else '–'} : {ass if ass is not None else '–'} {html.escape(str(away))}** · {html.escape(status or 'Geplant')}")
+                    st.caption("Einzelne DEL-Torschützen sind über die vorhandene Datenquelle nicht zuverlässig verfügbar.")
+                if not games: st.caption("Heute keine Begegnungen")
+    if found==0: st.info("Für die Auswahl sind keine passenden Spiele vorhanden.")
+
+
 st.title("🎯 SportRadar – Torschützen heute & morgen")
 st.caption("Deutsche Zeit · Saison automatisch · Poisson-Modell mit Stichproben-Glättung")
-page=st.radio("Bereich",["🎯 Torprognosen","🎟️ Kombi & Prüfung","⭐ Favoriten"],horizontal=True)
+page=st.radio("Bereich",["🎯 Torprognosen","🎟️ Kombi & Prüfung","🔴 Live-Ergebnisse","⭐ Favoriten"],horizontal=True)
 sport=st.radio("Sportart",["🏒 Eishockey","⚽ Fußball"],horizontal=True)
 leagues=["NHL","DEL"] if sport.startswith("🏒") else list(LEAGUES)
 league=st.selectbox("Liga",leagues)
@@ -1315,6 +1456,8 @@ if page.startswith("⭐"):
             if update_favorites(new): st.rerun()
 elif page.startswith("🎟️"):
     combo_view(day,sport,league)
+elif page.startswith("🔴"):
+    live_view(day)
 elif sport.startswith("🏒"):
     if league=="NHL": nhl_view(day)
     else: del_view(day)
