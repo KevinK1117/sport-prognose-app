@@ -22,7 +22,7 @@ jobs:
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-            - name: Persist processed goals
+      - name: Persist processed goals
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
