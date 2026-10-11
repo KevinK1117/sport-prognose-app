@@ -1195,6 +1195,16 @@ def combo_player_details(player,day,uid):
         st.caption("Für NHL/DEL stehen hier Spielerhistorie und Form zur Verfügung. Verifizierte Spielaufstellungen sind nicht für jede Begegnung abrufbar.")
 
 
+def combo_portrait(player):
+    url=safe_logo(player.get("photo"))
+    if not url and player.get("sport")=="football" and player.get("player_id"):
+        try:
+            pid=int(player["player_id"])
+            if pid>0: url=f"https://media.api-sports.io/football/players/{pid}.png"
+        except (TypeError,ValueError): pass
+    return url
+
+
 def render_form_combo(picks):
     if not picks:
         st.info("Keine grünen Torschützen-Kandidaten mit verifizierter Form und Spielzeit gefunden. Es werden keine Tipps ergänzt.")
@@ -1204,20 +1214,28 @@ def render_form_combo(picks):
         form=p["form"]
         avg_minutes=(form.get("minutes") or 0)/form["played"]
         unit="Eiszeit" if p["sport"]=="hockey" else "Spielzeit"
-        st.markdown(f'**{index}. 🟢 {html.escape(p["name"])}** · {html.escape(p["team"])} · {p["league"]}')
-        st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse, Ø {avg_minutes:.1f} Min. {unit}')
         if p["sport"]=="football":
-            rating_count=form.get("rating_count",0)
-            rating=form.get("rating_sum",0)/rating_count if rating_count else None
-            label="API-Football Ø-Bewertung"
-            official=True
+            count=form.get("rating_count",0)
+            rating=form.get("rating_sum",0)/count if count else None
+            label="API-Football Ø-Note"
         else:
             rating=nhl_own_form_grade(form)
-            rating_count=form["played"]
-            label="SportRadar-Formindex (eigene Berechnung)"
-            official=False
-        st.markdown(grade_badge(label,rating,rating_count,official=official),unsafe_allow_html=True)
-        st.caption(f'🔥 Formwert: {form_score(form,p["sport"]):.2f} · Letzte {form["played"]} Einsätze · Position: {p.get("position") or "Unbekannt"}')
+            count=form["played"]
+            label="SportRadar-Formindex"
+        rating_text=f"{rating:.1f}".replace(".",",") if rating is not None else "–"
+        photo=combo_portrait(p)
+        avatar=(f'<img src="{html.escape(photo,quote=True)}" alt="Spielerfoto" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'👤\'">' if photo else '👤')
+        name=html.escape(str(p.get("name") or "Unbekannt"))
+        team=html.escape(str(p.get("team") or "–"))
+        league=html.escape(str(p.get("league") or "–"))
+        st.markdown(f'''<div class="sr-combo-spotlight">
+          <div class="sr-combo-avatar">{avatar}</div>
+          <div class="sr-combo-identity"><div class="sr-combo-name"><span class="sr-combo-rank">{index}</span> {name}</div>
+          <div class="sr-combo-league">{league} <span>·</span> {team}</div></div>
+          <div class="sr-combo-mini-grade"><small>🔥 {label}</small><strong>{rating_text}<em>/10</em></strong><small>{count} bewertete Einsätze</small></div>
+        </div>''',unsafe_allow_html=True)
+        st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}')
+        st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
         favorite_button(p,f"combo_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
     st.metric("Ausgewählte Tipps",len(picks))
@@ -1617,3 +1635,5 @@ elif sport.startswith("🏒"):
 else: football_view(day,league)
 st.divider()
 st.caption("Alle Prozentwerte sind Modellschätzungen, keine Garantien oder Wettquoten. Aufstellung, Verletzungen, Gegnerstärke, Eiszeit und kleine Stichproben sind nicht vollständig berücksichtigt.")
+
+st.markdown("<style>"+'\n/* Kompakte Form-Kombi: Portrait und Spielername statt übergroßer Formbox */\n.sr-combo-spotlight{display:flex;align-items:center;gap:12px;padding:12px;margin:16px 0 8px;border:1px solid #1688d9;border-radius:17px;background:linear-gradient(115deg,#0b2b52,#071a35);box-shadow:0 4px 18px #001b}\n.sr-combo-avatar{width:78px;height:85px;flex:0 0 78px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#173f65;font-size:2rem;overflow:hidden;color:#b9eaff}\n.sr-combo-avatar img{width:100%;height:100%;object-fit:contain;object-position:center bottom}\n.sr-combo-identity{flex:1;min-width:0}\n.sr-combo-name{color:#fff;font-weight:900;font-size:clamp(1.22rem,4.8vw,1.9rem);line-height:1.15;overflow-wrap:anywhere}\n.sr-combo-rank{display:inline-flex;align-items:center;justify-content:center;background:#15b86c;color:#fff;border-radius:50%;font-size:.78rem;width:24px;height:24px;vertical-align:middle}\n.sr-combo-league{color:#64ffcd;font-weight:850;font-size:clamp(.98rem,3.6vw,1.25rem);margin-top:8px;overflow-wrap:anywhere}\n.sr-combo-league span{color:#9dbad6}\n.sr-combo-mini-grade{flex:0 0 115px;max-width:115px;padding:8px;border:1px solid #087b79;border-radius:12px;background:#073b46;text-align:center;color:#e7fffa}\n.sr-combo-mini-grade small{display:block;font-size:.67rem;line-height:1.25}\n.sr-combo-mini-grade strong{display:block;color:#65ffd0;font-size:1.65rem;line-height:1.2;margin:5px 0}\n.sr-combo-mini-grade em{font-size:.7rem;font-style:normal;color:#d0f4eb}\n@media(max-width:480px){.sr-combo-spotlight{gap:8px;padding:9px}.sr-combo-avatar{width:60px;height:75px;flex-basis:60px}.sr-combo-mini-grade{flex-basis:87px;max-width:87px;padding:6px 3px}.sr-combo-mini-grade strong{font-size:1.35rem}.sr-combo-mini-grade small{font-size:.58rem}}\n'+"</style>",unsafe_allow_html=True)
