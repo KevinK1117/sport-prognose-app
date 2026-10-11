@@ -294,7 +294,19 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
             form_html='<div class="sr-form"><b>🔥 Aktuelle Form</b><div>Letzte 5 Einsätze: verlässliche Einzelspieldaten nicht verfügbar</div></div>'
     else:
         form_html=''
-    st.markdown(f'''<div class="player sr-{tier}"><div class="player-head">{name}</div><div class="muted">{team}</div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div>{chips}</div>{form_html}</div>''',unsafe_allow_html=True)
+    portrait=safe_logo(player.get("photo"))
+    if not portrait and sport=="football" and player.get("player_id"):
+        portrait=f'https://media.api-sports.io/football/players/{player["player_id"]}.png'
+    avatar=f'<img src="{html.escape(portrait,quote=True)}" alt="Spielerfoto" loading="lazy">' if portrait else '👤'
+    grade_value=None
+    if form_stats and form_stats.get("played",0)>=3:
+        if sport=="football":
+            cnt=form_stats.get("rating_count",0)
+            grade_value=form_stats.get("rating_sum",0)/cnt if cnt else None
+        else: grade_value=nhl_own_form_grade(form_stats)
+    grade_text=f'{grade_value:.1f}'.replace('.',',') if grade_value is not None else '–'
+    league_text=html.escape(str(player.get("league") or ("NHL" if sport=="nhl" else "DEL" if sport=="del" else "Fußball")))
+    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{form_html}</div>''',unsafe_allow_html=True)
 
 
 def show_players(players,period_label,sport="hockey"):
@@ -1234,7 +1246,10 @@ def render_form_combo(picks):
           <div class="sr-combo-league">{league} <span>·</span> {team}</div></div>
           <div class="sr-combo-mini-grade"><small>🔥 {label}</small><strong>{rating_text}<em>/10</em></strong><small>{count} bewertete Einsätze</small></div>
         </div>''',unsafe_allow_html=True)
-        st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}')
+        period_name="1. Halbzeit" if p["sport"]=="football" else "1. Drittel"
+        period_value=p.get("half")
+        period_detail=f" · {period_name}: {pct(period_value)}" if period_value is not None else ""
+        st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
         favorite_button(p,f"combo_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
@@ -1637,3 +1652,27 @@ st.divider()
 st.caption("Alle Prozentwerte sind Modellschätzungen, keine Garantien oder Wettquoten. Aufstellung, Verletzungen, Gegnerstärke, Eiszeit und kleine Stichproben sind nicht vollständig berücksichtigt.")
 
 st.markdown("<style>"+'\n/* Kompakte Form-Kombi: Portrait und Spielername statt übergroßer Formbox */\n.sr-combo-spotlight{display:flex;align-items:center;gap:12px;padding:12px;margin:16px 0 8px;border:1px solid #1688d9;border-radius:17px;background:linear-gradient(115deg,#0b2b52,#071a35);box-shadow:0 4px 18px #001b}\n.sr-combo-avatar{width:78px;height:85px;flex:0 0 78px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#173f65;font-size:2rem;overflow:hidden;color:#b9eaff}\n.sr-combo-avatar img{width:100%;height:100%;object-fit:contain;object-position:center bottom}\n.sr-combo-identity{flex:1;min-width:0}\n.sr-combo-name{color:#fff;font-weight:900;font-size:clamp(1.22rem,4.8vw,1.9rem);line-height:1.15;overflow-wrap:anywhere}\n.sr-combo-rank{display:inline-flex;align-items:center;justify-content:center;background:#15b86c;color:#fff;border-radius:50%;font-size:.78rem;width:24px;height:24px;vertical-align:middle}\n.sr-combo-league{color:#64ffcd;font-weight:850;font-size:clamp(.98rem,3.6vw,1.25rem);margin-top:8px;overflow-wrap:anywhere}\n.sr-combo-league span{color:#9dbad6}\n.sr-combo-mini-grade{flex:0 0 115px;max-width:115px;padding:8px;border:1px solid #087b79;border-radius:12px;background:#073b46;text-align:center;color:#e7fffa}\n.sr-combo-mini-grade small{display:block;font-size:.67rem;line-height:1.25}\n.sr-combo-mini-grade strong{display:block;color:#65ffd0;font-size:1.65rem;line-height:1.2;margin:5px 0}\n.sr-combo-mini-grade em{font-size:.7rem;font-style:normal;color:#d0f4eb}\n@media(max-width:480px){.sr-combo-spotlight{gap:8px;padding:9px}.sr-combo-avatar{width:60px;height:75px;flex-basis:60px}.sr-combo-mini-grade{flex-basis:87px;max-width:87px;padding:6px 3px}.sr-combo-mini-grade strong{font-size:1.35rem}.sr-combo-mini-grade small{font-size:.58rem}}\n'+"</style>",unsafe_allow_html=True)
+
+# Einheitliche kompakte Karten für Prognosen und Kombiwetten.
+st.markdown("""<style>
+.sr-pred-compact{padding:12px!important;margin:10px 0!important;border-radius:17px!important}
+.sr-pred-head{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.sr-pred-photo{width:68px;height:72px;flex:0 0 68px;border-radius:11px;background:#173f65;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sr-pred-photo img{width:100%;height:100%;object-fit:contain}
+.sr-pred-identity{flex:1;min-width:0}
+.sr-pred-identity .player-head{font-size:clamp(1.12rem,4.3vw,1.55rem)!important;line-height:1.18!important;color:#fff!important;font-weight:900!important}
+.sr-pred-league{font-size:clamp(.84rem,3.2vw,1.03rem);font-weight:850;color:#63fbd1;margin-top:5px;overflow-wrap:anywhere}
+.sr-pred-grade{flex:0 0 87px;background:#073b46;border:1px solid #0b817f;border-radius:11px;padding:7px 4px;text-align:center}
+.sr-pred-grade small{display:block;color:#d8fff4;font-size:.61rem;line-height:1.25}
+.sr-pred-grade strong{display:block;color:#68ffd0;font-size:1.3rem;margin-top:4px}
+.sr-pred-grade em{font-size:.62rem;font-style:normal;color:#d4eaf1}
+.sr-pred-compact .pair{gap:8px!important;margin:7px 0!important}
+.sr-pred-compact .prob{padding:8px 6px!important;border-radius:11px!important}
+.sr-pred-compact .prob strong{font-size:clamp(1.16rem,4.7vw,1.55rem)!important}
+.sr-pred-compact .prob small{font-size:.75rem!important;color:#d8f2ff!important}
+.sr-pred-chips .pill{font-size:.75rem!important;padding:4px 7px!important;margin:3px!important}
+.sr-pred-compact .sr-form{margin-top:7px!important;padding:9px!important;font-size:.82rem!important}
+.sr-pred-compact .sr-grade{padding:7px!important;margin:5px 0!important}
+.sr-pred-compact .sr-grade-score{font-size:1.25rem!important}
+@media(max-width:480px){.sr-pred-photo{width:55px;height:62px;flex-basis:55px}.sr-pred-head{gap:7px}.sr-pred-grade{flex-basis:77px}}
+</style>""",unsafe_allow_html=True)
