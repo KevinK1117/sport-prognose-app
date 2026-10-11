@@ -59,6 +59,7 @@ st.markdown("""<style>
 .team-logo-fallback{font-size:1.7rem}
 @media(max-width:480px){.sr-match-logo{width:49px;height:49px}.sr-match{gap:4px;padding:7px 0}.sr-team-heading{font-size:1.02rem}}
 </style>""", unsafe_allow_html=True)
+st.markdown('<style>\n.sr-lineup-wrap{margin:12px 0 18px;border:1px solid #d9e5eb;border-radius:17px;padding:10px;background:white}\n.sr-lineup-title{text-align:center;font-size:.85rem;font-weight:750;color:#17324b;margin:4px 0 12px}\n.sr-lineup-field{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:space-around;gap:14px;padding:18px 5px;min-height:480px;overflow:hidden;border:3px solid #fff;border-radius:12px}\n.sr-lineup-pitch{background:repeating-linear-gradient(0deg,#2c885d 0px,#2c885d 70px,#368e64 70px,#368e64 140px)}\n.sr-lineup-rink{background:linear-gradient(90deg,transparent 30%,#93c7e544 30%,#93c7e544 31%,transparent 31%,transparent 69%,#93c7e544 69%,#93c7e544 70%,transparent 70%),#f0f9ff;border-color:#7caac5}\n.sr-lineup-field:before{content:"";position:absolute;inset:12px;border:2px solid #ffffff88;border-radius:3px;pointer-events:none;z-index:-1}\n.sr-lineup-field:after{content:"";position:absolute;top:50%;left:0;right:0;border-top:2px solid #ffffff77;pointer-events:none;z-index:-1}\n.sr-lineup-row{display:flex;justify-content:space-around;align-items:center;gap:2px;width:100%}\n.sr-lineup-person{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;text-align:center;gap:3px}\n.sr-lineup-avatar{background:#ffffffed;border-radius:50%;width:31px;height:31px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 2px 5px #0002}\n.sr-lineup-name{font-size:clamp(.60rem,2.3vw,.82rem);line-height:1.15;font-weight:750;background:#fffffff2;color:#17324b;border-radius:6px;padding:4px 3px;max-width:100%;overflow-wrap:anywhere;box-shadow:0 2px 5px #0002}\n.sr-lineup-pos{font-size:.65rem;font-weight:650;color:#17324b;background:#ffffffb9;border-radius:5px;padding:1px 5px}\n.sr-lineup-bench{padding:10px 2px}.sr-lineup-bench-list{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.sr-lineup-bench-list .sr-lineup-person{flex:0 1 100px}\n@media(max-width:480px){.sr-lineup-field{min-height:410px}.sr-lineup-avatar{width:27px;height:27px;font-size:16px}.sr-lineup-name{font-size:.61rem}}\n</style>',unsafe_allow_html=True)
 TZ = ZoneInfo("Europe/Berlin")
 LEAGUES = {"Bundesliga":78,"2. Bundesliga":79,"La Liga":140,"Serie A":135,"Premier League":39,"Ligue 1":61,"MLS":253}
 DEL_TEAMS = {"team_1":"ERC Ingolstadt","team_2":"Adler Mannheim","team_3":"Eisbären Berlin","team_5":"Krefeld Pinguine","team_6":"Straubing Tigers","team_7":"Iserlohn Roosters","team_8":"Grizzlys Wolfsburg","team_9":"Pinguins Bremerhaven","team_11":"Kölner Haie","team_12":"EHC Red Bull München","team_13":"Augsburger Panther","team_14":"Nürnberg Ice Tigers","team_15":"Schwenninger Wild Wings","team_44":"Löwen Frankfurt"}
@@ -414,6 +415,7 @@ def nhl_view(day):
             hp=nhl_skaters(home.get("abbrev")) if home.get("abbrev") else None
             ap=nhl_skaters(away.get("abbrev")) if away.get("abbrev") else None
             if hp is None or ap is None: st.warning("NHL-Spielerstatistiken nicht vollständig verfügbar."); continue
+            hockey_lineup_panel(home_name,hp,away_name,ap,f"nhl_{day}")
             show_match_teams(home_name,home.get("logo"),hp,away_name,away.get("logo"),ap,"1. Drittel",f'nhl_{day}_{game.get("id",str(home.get("abbrev"))+str(away.get("abbrev")))}',sport="nhl")
 
 
@@ -492,6 +494,7 @@ def del_view(day):
             hp=[p for p in players if p["team_id"]==home_id]
             ap=[p for p in players if p["team_id"]==away_id]
             st.caption(f"{len(hp)+len(ap)} Spieler mit absolvierten Saisonspielen für diese Begegnung")
+            hockey_lineup_panel(home_name,hp,away_name,ap,f"del_{day}")
             show_match_teams(DEL_TEAMS.get(home_id,home_name),home.get("logo"),hp,DEL_TEAMS.get(away_id,away_name),away.get("logo"),ap,"1. Drittel",f'del_{day}_{match.get("id",home_id+"_"+away_id)}',sport="del")
     st.divider()
     with st.expander("📊 Alle DEL-Spieler und Mannschaften"):
@@ -693,37 +696,83 @@ def football_expected_lineup(team_id,day,key):
     return {"players":chosen,"samples":samples,"formation":formation}
 
 
+def lineup_board(team_name, players, sport="football", formation=None, confirmed=False, bench=None):
+    """Mobile-friendly pitch/rink with actual names; no fabricated portraits or ratings."""
+    def tile(p):
+        name=html.escape(str(p.get("name") or "?"))
+        number=p.get("number")
+        number=f"{html.escape(str(number))} " if number is not None else ""
+        position=html.escape(str(p.get("pos") or ""))
+        return f'<div class="sr-lineup-person"><span class="sr-lineup-avatar">👤</span><span class="sr-lineup-name">{number}{name}</span><span class="sr-lineup-pos">{position}</span></div>'
+    if sport=="football":
+        groups={"G":[],"D":[],"M":[],"F":[]}
+        for p in players:
+            pos=str(p.get("pos") or "M").upper()[:1]
+            groups[pos if pos in groups else "M"].append(p)
+        rows=[groups[k] for k in ("F","M","D","G") if groups[k]]
+        field="pitch"
+    else:
+        # No verified line assignments: display heuristic groupings, not official lines.
+        forwards=[p for p in players if str(p.get("pos") or "").upper() not in ("D","G")]
+        defenders=[p for p in players if str(p.get("pos") or "").upper()=="D"]
+        goalies=[p for p in players if str(p.get("pos") or "").upper()=="G"]
+        rows=[forwards[i:i+3] for i in range(0,min(len(forwards),9),3)]
+        rows += [defenders[i:i+2] for i in range(0,min(len(defenders),6),2)]
+        if goalies: rows.append(goalies[:1])
+        field="rink"
+    if not rows:
+        st.info("Keine Spieler für eine Aufstellung verfügbar."); return
+    status="Bestätigte Aufstellung" if confirmed else "Voraussichtliche / statistische Darstellung"
+    detail=f" · Formation {html.escape(str(formation))}" if formation else ""
+    markup=(f'<div class="sr-lineup-wrap"><div class="sr-lineup-title">{html.escape(team_name)} · {status}{detail}</div>'
+            f'<div class="sr-lineup-field sr-lineup-{field}">'
+            +''.join('<div class="sr-lineup-row">'+''.join(tile(x) for x in row)+'</div>' for row in rows)
+            +'</div>')
+    if bench:
+        markup+='<div class="sr-lineup-bench"><b>🪑 Ersatzbank</b><div class="sr-lineup-bench-list">'+''.join(tile(x) for x in bench)+'</div></div>'
+    markup+='</div>'
+    st.markdown(markup,unsafe_allow_html=True)
+
+
+def hockey_lineup_panel(home_name,home_players,away_name,away_players,identifier):
+    with st.expander("👥 Mannschaftsaufstellung auf dem Eis (statistisch)",expanded=False):
+        st.caption("Keine bestätigten Reihen: Spieler werden nach Saison-Torstatistik und Position angeordnet. Verletzungen und tatsächliche Einsatzreihen sind nicht verifiziert.")
+        tab_home,tab_away=st.tabs([f"🏠 {home_name}",f"✈️ {away_name}"])
+        for tab,name,players in ((tab_home,home_name,home_players),(tab_away,away_name,away_players)):
+            with tab:
+                skaters=sorted(players,key=lambda x:x.get("p") or 0,reverse=True)
+                arranged=[{"name":p.get("name"),"pos":p.get("position"),"number":p.get("number")} for p in skaters]
+                lineup_board(name,arranged,"hockey")
+
+
 def display_football_lineup(fixture_id,home_name,away_name,key,home_id=None,away_id=None,day=None):
-    with st.expander("👥 Voraussichtliche / bestätigte Aufstellung",expanded=False):
+    with st.expander("👥 Voraussichtliche / bestätigte Aufstellung auf dem Spielfeld",expanded=False):
         rows=football_confirmed_lineup(fixture_id,key)
         confirmed={str((r.get("team") or {}).get("id")):r for r in (rows or [])}
-        for team_name,team_id in ((home_name,home_id),(away_name,away_id)):
-            st.markdown(f"**{team_name}**")
-            team=confirmed.get(str(team_id))
-            if team and team.get("startXI"):
-                st.success("✅ Bestätigte Startelf vom Datenanbieter")
-                st.caption("Formation: "+str(team.get("formation") or "unbekannt"))
-                for section,label in (("startXI","Startelf"),("substitutes","Ersatzbank")):
-                    names=[f"{(x.get('player') or {}).get('name','?')} ({(x.get('player') or {}).get('pos') or '?'})" for x in team.get(section) or []]
-                    st.write(f"{label}: "+(", ".join(names) if names else "Keine Angaben"))
-            else:
-                st.info("⏳ Noch keine bestätigte Aufstellung. Voraussichtliche Startelf aus den letzten verfügbaren bestätigten Aufstellungen:")
-                if not team_id or day is None:
-                    st.caption("Keine Teamkennung verfügbar.")
-                    continue
-                # Lazy fetch: prevent many extra API requests on every page load.
-                if st.button(f"🔎 Voraussichtliche Elf für {team_name} anzeigen",key=f"expected_{fixture_id}_{team_id}"):
-                    st.session_state[f"expected_show_{fixture_id}_{team_id}"]=True
-                if st.session_state.get(f"expected_show_{fixture_id}_{team_id}"):
-                    with st.spinner("Letzte bestätigte Startelf-Einsätze auswerten …"):
-                        expected=football_expected_lineup(team_id,day,key)
-                    if not expected:
-                        st.warning("Zu wenige bestätigte frühere Aufstellungen für eine belastbare Prognose.")
-                    else:
-                        st.caption(f"Prognose aus {expected['samples']} vergangenen Startaufstellungen · Häufigste Formation: {expected['formation'] or 'unbekannt'}")
-                        for player in expected["players"]:
-                            st.write(f"{player['name']} · {player['pos']} · {player['starts']}/{expected['samples']} zuletzt in der Startelf")
-                        st.caption("⚠️ Statistische Erwartung, keine offizielle oder journalistisch bestätigte Prognose. Verletzungen, Sperren und Rotation sind nicht berücksichtigt.")
+        tab_home,tab_away=st.tabs([f"🏠 {home_name}",f"✈️ {away_name}"])
+        for tab,team_name,team_id in ((tab_home,home_name,home_id),(tab_away,away_name,away_id)):
+            with tab:
+                team=confirmed.get(str(team_id))
+                if team and team.get("startXI"):
+                    st.success("✅ Bestätigte Startelf vom Datenanbieter")
+                    starters=[(x.get("player") or {}) for x in team.get("startXI") or []]
+                    bench=[(x.get("player") or {}) for x in team.get("substitutes") or []]
+                    lineup_board(team_name,starters,formation=team.get("formation"),confirmed=True,bench=bench)
+                else:
+                    st.info("⏳ Noch keine bestätigte Startelf. Prognose aus früheren Startaufstellungen möglich.")
+                    if not team_id or day is None:
+                        st.caption("Keine Teamkennung verfügbar."); continue
+                    flag=f"expected_show_{fixture_id}_{team_id}"
+                    if st.button(f"🔎 Voraussichtliche Elf für {team_name} anzeigen",key=f"expected_{fixture_id}_{team_id}"):
+                        st.session_state[flag]=True
+                    if st.session_state.get(flag):
+                        with st.spinner("Frühere Startelf-Einsätze auswerten …"):
+                            expected=football_expected_lineup(team_id,day,key)
+                        if not expected:
+                            st.warning("Zu wenige frühere bestätigte Aufstellungen für eine belastbare Prognose.")
+                        else:
+                            lineup_board(team_name,expected["players"],formation=expected["formation"])
+                            st.caption(f"Statistische Prognose aus {expected['samples']} früheren Aufstellungen. Keine bestätigte Elf; Verletzungen, Sperren und Rotation sind nicht berücksichtigt.")
 
 
 def combo_candidates(day, sport, league):
