@@ -371,7 +371,7 @@ def football_view(day,league):
                 hp=football_players(LEAGUES[league],year,home.get("id"),key)
                 ap=football_players(LEAGUES[league],year,away.get("id"),key)
             if hp is None or ap is None: st.warning("Spielerstatistiken nicht vollständig verfügbar."); continue
-            display_football_lineup(fixture.get("id"),home.get("name"),away.get("name"),key)
+            display_football_lineup(fixture.get("id"),home.get("name"),away.get("name"),key,home.get("id"),away.get("id"),day)
             show_match_teams(home.get("name","Heim"),home.get("logo"),hp,away.get("name","Gast"),away.get("logo"),ap,"1. Halbzeit",f'football_{league}_{day}_{fixture.get("id",home.get("id"))}',sport="football")
 
 
@@ -555,22 +555,69 @@ def football_confirmed_lineup(fixture_id,key):
     return rows if isinstance(rows,list) and rows else None
 
 
-def display_football_lineup(fixture_id,home_name,away_name,key):
-    with st.expander("👥 Aufstellung (bestätigt, sobald verfügbar)",expanded=False):
+@st.cache_data(ttl=7200,show_spinner=False)
+def football_expected_lineup(team_id,day,key):
+    """Estimate an XI from real recent confirmed lineups; not a confirmed lineup."""
+    if not team_id or not key: return None
+    ids=football_recent_fixture_ids(team_id,day,key)
+    appearances={}; samples=0; formations={}
+    for fixture_id in ids:
         rows=football_confirmed_lineup(fixture_id,key)
-        if not rows:
-            st.info("Noch keine bestätigte Aufstellung vom Datenanbieter. Eine voraussichtliche Startelf wird ohne belastbare Quelle nicht erfunden.")
-            return
-        for team in rows:
-            team_name=(team.get("team") or {}).get("name") or "Mannschaft"
-            formation=team.get("formation") or "Formation unbekannt"
-            st.markdown(f"**{team_name} · {formation}**")
-            for section,label in (("startXI","Startelf"),("substitutes","Bank")):
-                names=[]
-                for item in team.get(section) or []:
-                    player=item.get("player") or {}
-                    names.append(f"{player.get('name','?')} ({player.get('pos') or '?'})")
-                st.caption(f"{label}: "+(", ".join(names) if names else "Keine Angaben"))
+        if not rows: continue
+        team=next((r for r in rows if (r.get("team") or {}).get("id")==team_id),None)
+        if not team or not team.get("startXI"): continue
+        samples+=1
+        formation=team.get("formation")
+        if formation: formations[formation]=formations.get(formation,0)+1
+        for item in team["startXI"]:
+            player=item.get("player") or {}
+            ident=player.get("id") or player.get("name")
+            if not ident: continue
+            entry=appearances.setdefault(str(ident),{"name":player.get("name") or "?","pos":player.get("pos") or "?","starts":0})
+            entry["starts"]+=1
+    if samples<2: return None
+    positions={"G":0,"D":1,"M":2,"F":3}
+    # One goalkeeper and ten outfield players, selected by recent starting frequency.
+    ranked=sorted(appearances.values(),key=lambda x:(-x["starts"],x["name"]))
+    keepers=[p for p in ranked if p["pos"]=="G"]
+    others=[p for p in ranked if p["pos"]!="G"]
+    chosen=(keepers[:1]+others[:10]) if keepers else ranked[:11]
+    chosen.sort(key=lambda x:(positions.get(x["pos"],4),-x["starts"],x["name"]))
+    formation=max(formations,key=formations.get) if formations else None
+    return {"players":chosen,"samples":samples,"formation":formation}
+
+
+def display_football_lineup(fixture_id,home_name,away_name,key,home_id=None,away_id=None,day=None):
+    with st.expander("👥 Voraussichtliche / bestätigte Aufstellung",expanded=False):
+        rows=football_confirmed_lineup(fixture_id,key)
+        confirmed={str((r.get("team") or {}).get("id")):r for r in (rows or [])}
+        for team_name,team_id in ((home_name,home_id),(away_name,away_id)):
+            st.markdown(f"**{team_name}**")
+            team=confirmed.get(str(team_id))
+            if team and team.get("startXI"):
+                st.success("✅ Bestätigte Startelf vom Datenanbieter")
+                st.caption("Formation: "+str(team.get("formation") or "unbekannt"))
+                for section,label in (("startXI","Startelf"),("substitutes","Ersatzbank")):
+                    names=[f"{(x.get('player') or {}).get('name','?')} ({(x.get('player') or {}).get('pos') or '?'})" for x in team.get(section) or []]
+                    st.write(f"{label}: "+(", ".join(names) if names else "Keine Angaben"))
+            else:
+                st.info("⏳ Noch keine bestätigte Aufstellung. Voraussichtliche Startelf aus den letzten verfügbaren bestätigten Aufstellungen:")
+                if not team_id or day is None:
+                    st.caption("Keine Teamkennung verfügbar.")
+                    continue
+                # Lazy fetch: prevent many extra API requests on every page load.
+                if st.button(f"🔎 Voraussichtliche Elf für {team_name} anzeigen",key=f"expected_{fixture_id}_{team_id}"):
+                    st.session_state[f"expected_show_{fixture_id}_{team_id}"]=True
+                if st.session_state.get(f"expected_show_{fixture_id}_{team_id}"):
+                    with st.spinner("Letzte bestätigte Startelf-Einsätze auswerten …"):
+                        expected=football_expected_lineup(team_id,day,key)
+                    if not expected:
+                        st.warning("Zu wenige bestätigte frühere Aufstellungen für eine belastbare Prognose.")
+                    else:
+                        st.caption(f"Prognose aus {expected['samples']} vergangenen Startaufstellungen · Häufigste Formation: {expected['formation'] or 'unbekannt'}")
+                        for player in expected["players"]:
+                            st.write(f"{player['name']} · {player['pos']} · {player['starts']}/{expected['samples']} zuletzt in der Startelf")
+                        st.caption("⚠️ Statistische Erwartung, keine offizielle oder journalistisch bestätigte Prognose. Verletzungen, Sperren und Rotation sind nicht berücksichtigt.")
 
 
 def combo_candidates(day, sport, league):
