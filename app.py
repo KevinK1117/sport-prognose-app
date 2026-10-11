@@ -61,6 +61,7 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 st.markdown('<style>\n.sr-lineup-wrap{margin:12px 0 18px;border:1px solid #d9e5eb;border-radius:17px;padding:10px;background:white}\n.sr-lineup-title{text-align:center;font-size:.85rem;font-weight:750;color:#17324b;margin:4px 0 12px}\n.sr-lineup-field{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:space-around;gap:14px;padding:18px 5px;min-height:480px;overflow:hidden;border:3px solid #fff;border-radius:12px}\n.sr-lineup-pitch{background:repeating-linear-gradient(0deg,#2c885d 0px,#2c885d 70px,#368e64 70px,#368e64 140px)}\n.sr-lineup-rink{background:linear-gradient(90deg,transparent 30%,#93c7e544 30%,#93c7e544 31%,transparent 31%,transparent 69%,#93c7e544 69%,#93c7e544 70%,transparent 70%),#f0f9ff;border-color:#7caac5}\n.sr-lineup-field:before{content:"";position:absolute;inset:12px;border:2px solid #ffffff88;border-radius:3px;pointer-events:none;z-index:-1}\n.sr-lineup-field:after{content:"";position:absolute;top:50%;left:0;right:0;border-top:2px solid #ffffff77;pointer-events:none;z-index:-1}\n.sr-lineup-row{display:flex;justify-content:space-around;align-items:center;gap:2px;width:100%}\n.sr-lineup-person{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;text-align:center;gap:3px}\n.sr-lineup-avatar{background:#ffffffed;border-radius:50%;width:31px;height:31px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 2px 5px #0002}\n.sr-lineup-name{font-size:clamp(.60rem,2.3vw,.82rem);line-height:1.15;font-weight:750;background:#fffffff2;color:#17324b;border-radius:6px;padding:4px 3px;max-width:100%;overflow-wrap:anywhere;box-shadow:0 2px 5px #0002}\n.sr-lineup-pos{font-size:.65rem;font-weight:650;color:#17324b;background:#ffffffb9;border-radius:5px;padding:1px 5px}\n.sr-lineup-bench{padding:10px 2px}.sr-lineup-bench-list{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.sr-lineup-bench-list .sr-lineup-person{flex:0 1 100px}\n@media(max-width:480px){.sr-lineup-field{min-height:410px}.sr-lineup-avatar{width:27px;height:27px;font-size:16px}.sr-lineup-name{font-size:.61rem}}\n</style>',unsafe_allow_html=True)
 st.markdown("<style>"+'\n/* SportRadar 2026: vivid, compact mobile-first dashboard */\n[data-testid="stAppViewContainer"]{background:linear-gradient(160deg,#07192c 0%,#0d2b45 260px,#f2f7fb 600px,#f2f7fb 100%)!important}\n.block-container{max-width:1080px;padding-top:1rem!important}\nh1{color:#fff!important;font-weight:850!important;letter-spacing:-.04em!important;text-shadow:0 2px 8px #06152455}\nh1+p, h1~[data-testid="stCaptionContainer"]{color:#c9e8f5!important}\n[data-testid="stRadio"] label,[data-testid="stSelectbox"] label,[data-testid="stMultiSelect"] label{font-weight:700}\n[data-testid="stRadio"] [role="radiogroup"]{gap:.35rem;flex-wrap:wrap}\n[data-testid="stRadio"] [role="radio"]{accent-color:#fa315d}\n[data-testid="stExpander"]{border:1px solid #d5e4f0!important;border-radius:19px!important;background:#fff!important;box-shadow:0 8px 25px #102b4410!important;margin-bottom:12px}\n[data-testid="stExpander"] summary{background:linear-gradient(90deg,#e9f5fc,#f5faff)!important;color:#15334d!important;font-weight:750!important;padding:12px!important}\n.stButton>button{background:linear-gradient(110deg,#e8faff,#fff)!important;border:1px solid #61b8ca!important;color:#076478!important;border-radius:13px!important}\n.stButton>button[kind="primary"]{background:linear-gradient(105deg,#fc315b,#ee5c49)!important;color:#fff!important;border:0!important}\n.player{background:linear-gradient(135deg,#fff,#f2f9ff)!important;box-shadow:0 6px 18px #1839570d!important}\n.sr-live-card{background:#fff;border:1px solid #dbe8f1;border-radius:15px;margin:9px 0;padding:12px 13px;box-shadow:0 3px 12px #112b4110}\n.sr-live-card.is-running{border-left:5px solid #fb2b58;background:linear-gradient(100deg,#fff,#fff5f7)}\n.sr-live-card.is-finished{border-left:5px solid #16a878}\n.sr-live-card.is-upcoming{border-left:5px solid #8fa6b8}\n.sr-live-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}\n.sr-live-team{font-weight:750;font-size:.9rem;color:#16334e;overflow-wrap:anywhere}\n.sr-live-team:last-child{text-align:right}\n.sr-live-score{background:#09283e;color:#fff;border-radius:11px;padding:7px 10px;font-weight:850;font-size:1.24rem;white-space:nowrap;font-variant-numeric:tabular-nums}\n.sr-live-state{margin-top:6px;color:#52667a;font-size:.8rem;font-weight:650}\n.sr-live-scorer{margin-top:7px;padding:6px 9px;border-radius:9px;background:#f0f7fb;font-size:.82rem;color:#24506a}\n.sr-hero{padding:15px 18px;border-radius:19px;background:linear-gradient(110deg,#fa2458,#b91664 55%,#093a6d);color:white;box-shadow:0 8px 22px #152a4933;margin:10px 0 16px}\n.sr-hero strong{font-size:1.25rem}.sr-hero small{display:block;color:#ffe3ec;margin-top:4px}\n.sr-combo-profile{border:1px solid #cbe4f0;border-radius:15px;padding:12px;background:#f4fbff;margin:9px 0 14px}\n@media(max-width:550px){.sr-live-card{padding:10px}.sr-live-team{font-size:.81rem}.sr-live-score{font-size:1.05rem;padding:6px}.block-container{padding-left:.75rem!important;padding-right:.75rem!important}}\n'+"</style>",unsafe_allow_html=True)
+st.markdown('\n<style>\n[data-testid="stAppViewContainer"]{background:#061528!important;color:#e9f4ff!important}\n[data-testid="stHeader"]{background:#061528!important}\n.block-container{max-width:1000px!important}\nh1,h2,h3,p,li,[data-testid="stMarkdownContainer"]{color:#e9f4ff}\n[data-testid="stCaptionContainer"],.stCaption{color:#93b3cd!important}\n[data-testid="stExpander"]{background:#0c233b!important;border:1px solid #1c4264!important;box-shadow:none!important}\n[data-testid="stExpander"] summary{background:#102a45!important;color:#fff!important}\n[data-testid="stExpander"] summary p{color:#fff!important}\n[data-testid="stTabs"] button{color:#a9c7de!important}\n[data-testid="stTabs"] button[aria-selected="true"]{color:#ff3866!important}\n[data-testid="stTabs"] [data-baseweb="tab-highlight"]{background:#ff3866!important}\n.sr-hero{background:linear-gradient(110deg,#a90039,#e91653 50%,#103a7d)!important;border:1px solid #fc386b!important}\n.sr-game{border-radius:15px;background:linear-gradient(150deg,#103c46,#062a34);border:1px solid #167e68;padding:12px;margin:6px 0 12px}\n.sr-game-running{border-color:#ff315c}.sr-game-finished{border-color:#0dbd86}.sr-game-upcoming{border-color:#315877}\n.sr-game-head{display:flex;justify-content:space-between;gap:12px;font-size:.75rem;color:#a4c8d7;font-weight:750;margin-bottom:12px}\n.sr-game-running .sr-game-head span:first-child{color:#ff416a}\n.sr-game-main{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:9px}\n.sr-game-team{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;font-size:.81rem;font-weight:750;min-width:0;overflow-wrap:anywhere;color:#fff}\n.sr-game-team img{width:43px!important;height:43px!important;object-fit:contain}\n.sr-game-result{font-size:clamp(1.3rem,6vw,2.15rem);font-weight:900;color:white;background:#031524;border-radius:10px;padding:8px 12px;white-space:nowrap}\n.sr-ticker-item{padding:12px 13px;margin:6px 0;border-radius:12px;background:#0d2c46;color:#e8f7ff;border-left:3px solid #fa335d;font-size:.88rem}\n.sr-stat{padding:9px 0}.sr-stat>div:first-child{display:flex;justify-content:space-between;gap:10px;color:#e6f4ff;font-size:.86rem}\n.sr-stat>div:first-child span{color:#a7c8df}.sr-stat-track{height:9px;background:#284b74;border-radius:9px;overflow:hidden;margin-top:8px}\n.sr-stat-track i{display:block;height:100%;background:#ff3565;border-radius:9px}\n.player{background:#0e2944!important;border-color:#235477!important;color:#f2f8ff!important}\n.player-head,.muted,.sr-team-heading{color:#f2f8ff!important}\n.prob{background:#123d50!important}.prob small{color:#c0d7e8!important}.prob strong{color:#64f2c5!important}\n.sr-form{background:#123d4b!important;color:#d8f0fa!important}.sr-form small{color:#bfd3e1!important}\n.pill{background:#1b4260!important;color:#eaf4fb!important}\n.sr-match{background:#0d2b46!important}.sr-match-name{color:#f5fbff!important}\n.sr-combo-profile{background:#102d47!important;border-color:#285e7b!important}\n.sr-lineup-wrap{background:#0d2a43!important;border-color:#265478!important}.sr-lineup-title{color:#fff!important}\n@media(max-width:480px){.sr-game{padding:10px}.sr-game-team{font-size:.72rem}.sr-game-result{padding:7px 8px}}\n</style>\n',unsafe_allow_html=True)
 TZ = ZoneInfo("Europe/Berlin")
 LEAGUES = {"Bundesliga":78,"2. Bundesliga":79,"La Liga":140,"Serie A":135,"Premier League":39,"Ligue 1":61,"MLS":253}
 DEL_TEAMS = {"team_1":"ERC Ingolstadt","team_2":"Adler Mannheim","team_3":"Eisbären Berlin","team_5":"Krefeld Pinguine","team_6":"Straubing Tigers","team_7":"Iserlohn Roosters","team_8":"Grizzlys Wolfsburg","team_9":"Pinguins Bremerhaven","team_11":"Kölner Haie","team_12":"EHC Red Bull München","team_13":"Augsburger Panther","team_14":"Nürnberg Ice Tigers","team_15":"Schwenninger Wild Wings","team_44":"Löwen Frankfurt"}
@@ -1378,100 +1379,160 @@ def live_del_games(date, key, league_id):
                          "timezone": "Europe/Berlin"}, provider="hockey", key=key)
 
 
-def live_match_card(home,away,score,state,running=False,finished=False,scorers=None):
-    css_class="is-running" if running else "is-finished" if finished else "is-upcoming"
-    st.markdown(f'<div class="sr-live-card {css_class}"><div class="sr-live-row"><span class="sr-live-team">{html.escape(str(home))}</span><span class="sr-live-score">{html.escape(str(score))}</span><span class="sr-live-team">{html.escape(str(away))}</span></div><div class="sr-live-state">{html.escape(str(state))}</div></div>',unsafe_allow_html=True)
-    if scorers is None: return
-    if isinstance(scorers,list) and scorers:
-        for scorer in scorers:
-            st.markdown(f'<div class="sr-live-scorer">⚽ {html.escape(str(scorer))}</div>',unsafe_allow_html=True)
-    elif isinstance(scorers,str): st.caption(scorers)
+@st.cache_data(ttl=60,show_spinner=False)
+def live_football_events(fixture_id,key):
+    rows=api("fixtures/events",{"fixture":fixture_id},key=key)
+    return rows if isinstance(rows,list) else None
+
+@st.cache_data(ttl=90,show_spinner=False)
+def live_football_statistics(fixture_id,key):
+    rows=api("fixtures/statistics",{"fixture":fixture_id},key=key)
+    return rows if isinstance(rows,list) else None
+
+
+def sr_live_card(home,away,score,state,running=False,finished=False,home_logo=None,away_logo=None):
+    kind="running" if running else "finished" if finished else "upcoming"
+    st.markdown(f"""<div class='sr-game sr-game-{kind}'>
+      <div class='sr-game-head'><span>{'🔴 LIVE' if running else '✅ ENDE' if finished else '🕒 GEPLANT'}</span><span>{html.escape(str(state))}</span></div>
+      <div class='sr-game-main'><div class='sr-game-team'>{logo_html(home_logo,44)}<span>{html.escape(str(home))}</span></div>
+      <div class='sr-game-result'>{html.escape(str(score))}</div>
+      <div class='sr-game-team'>{logo_html(away_logo,44)}<span>{html.escape(str(away))}</span></div></div></div>""",unsafe_allow_html=True)
+
+
+def sr_event_text(event):
+    kind=str(event.get('type') or '')
+    detail=str(event.get('detail') or '')
+    clock=event.get('time') or {}
+    minute=clock.get('elapsed'); extra=clock.get('extra')
+    time=f"{minute}+{extra}'" if extra else f"{minute}'" if minute is not None else '–'
+    player=(event.get('player') or {}).get('name') or 'Unbekannt'
+    assistant=(event.get('assist') or {}).get('name')
+    team=(event.get('team') or {}).get('name') or ''
+    symbol={'Goal':'⚽','Card':'🟨','subst':'🔄','Var':'📺'}.get(kind,'•')
+    if 'Red' in detail: symbol='🟥'
+    if kind=='Goal' and 'Missed' in detail: symbol='❌'
+    description=f'{symbol} {time}  {player} · {team}'
+    if kind=='subst' and assistant: description+=f' → {assistant}'
+    if detail and detail not in ('Normal Goal','Yellow Card','Substitution 1','Substitution 2','Substitution 3'): description+=f' · {detail}'
+    return description
+
+
+def sr_football_stats(fixture_id,key):
+    rows=live_football_statistics(fixture_id,key)
+    if not rows or len(rows)<2:
+        st.info('Spielstatistiken vom Anbieter derzeit nicht verfügbar.'); return
+    home={str(x.get('type')):x.get('value') for x in rows[0].get('statistics') or []}
+    away={str(x.get('type')):x.get('value') for x in rows[1].get('statistics') or []}
+    for label,source in [('Ballbesitz','Ball Possession'),('Schüsse','Total Shots'),('Schüsse aufs Tor','Shots on Goal'),('Ecken','Corner Kicks'),('Fouls','Fouls'),('Erwartete Tore (xG)','expected_goals')]:
+        a=home.get(source); b=away.get(source)
+        if a is None and b is None: continue
+        try:
+            va=float(str(a or 0).replace('%','')); vb=float(str(b or 0).replace('%',''))
+        except (TypeError,ValueError): continue
+        share=va/(va+vb) if va+vb>0 else .5
+        st.markdown(f'<div class="sr-stat"><div><b>{html.escape(str(a if a is not None else "–"))}</b><span>{html.escape(label)}</span><b>{html.escape(str(b if b is not None else "–"))}</b></div><div class="sr-stat-track"><i style="width:{share*100:.1f}%"></i></div></div>',unsafe_allow_html=True)
+
+
+def sr_football_detail(game,key,day):
+    fixture=game.get('fixture') or {}; fixture_id=fixture.get('id')
+    teams=game.get('teams') or {}; home=teams.get('home') or {}; away=teams.get('away') or {}
+    goals=game.get('goals') or {}; status=fixture.get('status') or {}
+    short=status.get('short') or 'NS'; running=short in ('1H','2H','HT','ET','BT','P','LIVE','INT')
+    finished=short in ('FT','AET','PEN')
+    score=f"{goals.get('home') if goals.get('home') is not None else '–'} : {goals.get('away') if goals.get('away') is not None else '–'}"
+    state=f"{status.get('elapsed')}'" if running and status.get('elapsed') is not None else status.get('long') or short
+    sr_live_card(home.get('name','Heim'),away.get('name','Gast'),score,state,running,finished,home.get('logo'),away.get('logo'))
+    if not fixture_id: return
+    tab1,tab2,tab3=st.tabs(['⚡ Live-Ticker','📊 Statistiken','👥 Aufstellungen'])
+    with tab1:
+        events=live_football_events(fixture_id,key) if running or finished else []
+        if events is None: st.info('Live-Ereignisse nicht abrufbar.')
+        elif not events: st.caption('Noch keine gemeldeten Spielereignisse.')
+        else:
+            for event in sorted(events,key=lambda x:((x.get('time') or {}).get('elapsed') or 0,(x.get('time') or {}).get('extra') or 0),reverse=True):
+                st.markdown('<div class="sr-ticker-item">'+html.escape(sr_event_text(event))+'</div>',unsafe_allow_html=True)
+    with tab2: sr_football_stats(fixture_id,key)
+    with tab3:
+        display_football_lineup(fixture_id,home.get('name','Heim'),away.get('name','Gast'),key,home.get('id'),away.get('id'),day)
 
 
 def live_view(day):
-    st.markdown('<div class="sr-hero"><strong>🔴 LIVE-ERGEBNISSE</strong><small>Alle Spiele · Spielstände · Torschützen</small></div>',unsafe_allow_html=True)
-    st.caption("Live-Abfrage beim jeweiligen Datenanbieter · Uhrzeiten in Deutschland · automatische Aktualisierung nur beim Neuladen")
-    selected=st.multiselect("Ligen anzeigen",list(LEAGUES)+["NHL","DEL"],default=list(LEAGUES)+["NHL","DEL"],key="live_leagues")
-    only_live=st.checkbox("Nur laufende Spiele",value=False,key="live_only_running")
-    if st.button("🔄 Live-Spielstände aktualisieren",key="live_refresh"):
-        live_football_fixtures.clear(); live_football_scorers.clear()
+    st.markdown('<div class="sr-hero"><strong>🔴 LIVE CENTER</strong><small>Spielstände · Ticker · Statistiken · Aufstellungen</small></div>',unsafe_allow_html=True)
+    selected=st.multiselect('Ligen',list(LEAGUES)+['NHL','DEL'],default=list(LEAGUES)+['NHL','DEL'],key='live_leagues')
+    filter_choice=st.segmented_control('Spielstatus',['Alle','Live','Beendet','Geplant'],default='Alle',key='live_status')
+    if st.button('🔄 Live-Daten aktualisieren',key='live_refresh',type='primary'):
+        live_football_fixtures.clear(); live_football_events.clear(); live_football_statistics.clear()
         live_nhl_scores.clear(); live_nhl_scorers.clear(); live_del_games.clear()
         st.rerun()
-    date=day.isoformat(); key=secret("API_SPORTS_KEY")
-    found=0
+    st.caption('Live-Daten beim Öffnen und nach Aktualisierung · API-Verfügbarkeit abhängig vom Anbieter')
+    date=day.isoformat(); key=secret('API_SPORTS_KEY'); found=0
     for league in selected:
-        with st.expander(f"{'⚽' if league in LEAGUES else '🏒'} {league}",expanded=True):
-            if league in LEAGUES:
-                if not key:
-                    st.warning("API_SPORTS_KEY fehlt."); continue
-                games=live_football_fixtures(LEAGUES[league],season(day,league),date,key)
-                if games is None:
-                    st.warning("Live-Ergebnisse derzeit nicht abrufbar."); continue
-                for game in sorted(games,key=lambda g:(g.get("fixture") or {}).get("timestamp") or 0):
-                    fixture=game.get("fixture") or {}; teams=game.get("teams") or {}
-                    home=(teams.get("home") or {}).get("name") or "Heim"
-                    away=(teams.get("away") or {}).get("name") or "Gast"
-                    status=(fixture.get("status") or {}).get("short") or "?"
-                    running=status in ("1H","2H","HT","ET","BT","P","LIVE","INT")
-                    finished=status in ("FT","AET","PEN")
-                    if only_live and not running: continue
+        if league in LEAGUES:
+            if not key: st.warning('API_SPORTS_KEY fehlt.'); break
+            games=live_football_fixtures(LEAGUES[league],season(day,league),date,key)
+            if games is None: st.warning(f'{league}: Daten nicht verfügbar.'); continue
+            eligible=[]
+            for g in games:
+                status=((g.get('fixture') or {}).get('status') or {}).get('short')
+                running=status in ('1H','2H','HT','ET','BT','P','LIVE','INT')
+                finished=status in ('FT','AET','PEN')
+                if filter_choice=='Live' and not running: continue
+                if filter_choice=='Beendet' and not finished: continue
+                if filter_choice=='Geplant' and (running or finished): continue
+                eligible.append(g)
+            if not eligible: continue
+            with st.expander(f'⚽ {league}  ·  {len(eligible)} Spiele',expanded=True):
+                for game in sorted(eligible,key=lambda x:(x.get('fixture') or {}).get('timestamp') or 0):
+                    t=game.get('teams') or {}; home=(t.get('home') or {}).get('name','Heim'); away=(t.get('away') or {}).get('name','Gast')
+                    with st.expander(f'🏟️ {home} – {away}',expanded=False):
+                        sr_football_detail(game,key,day)
                     found+=1
-                    goals=game.get("goals") or {}
-                    score=f"{goals.get('home') if goals.get('home') is not None else '–'} : {goals.get('away') if goals.get('away') is not None else '–'}"
-                    elapsed=(fixture.get("status") or {}).get("elapsed")
-                    state=f"🔴 {elapsed}'" if running and elapsed is not None else ("🔴 Live" if running else "✅ Ende" if finished else "⏳ "+str(status))
-                    live_match_card(home,away,score,state,running,finished)
-                    if (running or finished) and fixture.get("id"):
-                        scorers=live_football_scorers(fixture["id"],key)
-                        if scorers is None: st.caption("Torschützen momentan nicht abrufbar")
-                        elif scorers:
-                            for scorer in scorers: st.caption(scorer)
-                        elif any(isinstance(goals.get(side),int) and goals[side]>0 for side in ("home","away")):
-                            st.caption("Torschützen noch nicht gemeldet")
-                if not games: st.caption("Heute keine Begegnungen")
-            elif league=="NHL":
-                payload=live_nhl_scores(date)
-                if not isinstance(payload,dict):
-                    st.warning("NHL-Ergebnisse nicht verfügbar."); continue
-                games=payload.get("games") or []
-                for game in games:
-                    state=str(game.get("gameState") or "").upper()
-                    running=state in ("LIVE","CRIT")
-                    finished=state in ("FINAL","OFF")
-                    if only_live and not running: continue
+        elif league=='NHL':
+            payload=live_nhl_scores(date)
+            if not isinstance(payload,dict): st.warning('NHL-Daten nicht verfügbar.'); continue
+            games=[]
+            for game in payload.get('games') or []:
+                state=str(game.get('gameState') or '').upper(); running=state in ('LIVE','CRIT'); finished=state in ('FINAL','OFF')
+                if filter_choice=='Live' and not running or filter_choice=='Beendet' and not finished or filter_choice=='Geplant' and (running or finished): continue
+                games.append((game,running,finished))
+            if not games: continue
+            with st.expander(f'🏒 NHL  ·  {len(games)} Spiele',expanded=True):
+                for game,running,finished in games:
+                    home=game.get('homeTeam') or {}; away=game.get('awayTeam') or {}
+                    with st.expander(f'{nhl_team_name(home)} – {nhl_team_name(away)}',expanded=False):
+                        hs=home.get('score'); ass=away.get('score')
+                        sr_live_card(nhl_team_name(home),nhl_team_name(away),f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}",'Live' if running else 'Ende' if finished else 'Geplant',running,finished,home.get('logo'),away.get('logo'))
+                        t1,t2=st.tabs(['🏒 Tor-Ticker','📊 Spielinformationen'])
+                        with t1:
+                            goals=live_nhl_scorers(game['id']) if game.get('id') and (running or finished) else []
+                            if goals:
+                                for item in goals: st.markdown('<div class="sr-ticker-item">'+html.escape(item)+'</div>',unsafe_allow_html=True)
+                            else: st.caption('Keine bestätigten Torschützen verfügbar.')
+                        with t2:
+                            st.caption('Detaillierte NHL-Spielstatistiken hängen von der Live-Datenquelle ab.')
                     found+=1
-                    home=game.get("homeTeam") or {}; away=game.get("awayTeam") or {}
-                    hs=home.get("score"); ass=away.get("score")
-                    score=f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}"
-                    live_match_card(nhl_team_name(home),nhl_team_name(away),score,"🔴 Live" if running else "✅ Ende" if finished else "⏳ Geplant",running,finished)
-                    if (running or finished) and game.get("id"):
-                        scorers=live_nhl_scorers(game["id"])
-                        if scorers is None: st.caption("Torschützen momentan nicht abrufbar")
-                        elif scorers:
-                            for scorer in scorers: st.caption(scorer)
-                        elif (hs or 0)+(ass or 0)>0: st.caption("Torschützen noch nicht gemeldet")
-                if not games: st.caption("Heute keine Begegnungen")
-            else:
-                if not key:
-                    st.warning("API_SPORTS_KEY fehlt."); continue
-                games=live_del_games(date,key,secret("DEL_LEAGUE_ID") or "19")
-                if games is None:
-                    st.warning("DEL-Ergebnisse nicht verfügbar."); continue
-                for game in games:
-                    raw=game.get("status") or {}
-                    status=str(raw.get("short") or raw.get("long") or "") if isinstance(raw,dict) else str(raw)
-                    running=status.upper() in ("1P","2P","3P","OT","PEN","LIVE")
-                    if only_live and not running: continue
+        else:
+            if not key: st.warning('API_SPORTS_KEY fehlt.'); continue
+            games=live_del_games(date,key,secret('DEL_LEAGUE_ID') or '19')
+            if games is None: st.warning('DEL-Daten nicht verfügbar.'); continue
+            valid=[]
+            for g in games:
+                raw=g.get('status') or {}; status=str(raw.get('short') or raw.get('long') or '') if isinstance(raw,dict) else str(raw)
+                running=status.upper() in ('1P','2P','3P','OT','PEN','LIVE'); finished=status.upper() in ('FT','AOT','AP','FINAL','FINISHED')
+                if filter_choice=='Live' and not running or filter_choice=='Beendet' and not finished or filter_choice=='Geplant' and (running or finished): continue
+                valid.append((g,status,running,finished))
+            if not valid: continue
+            with st.expander(f'🏒 DEL  ·  {len(valid)} Spiele',expanded=True):
+                for game,status,running,finished in valid:
+                    teams=game.get('teams') or {}; home=teams.get('home') or {}; away=teams.get('away') or {}
+                    scores=game.get('scores') or {}
+                    hs=(scores.get('home') or {}).get('total') if isinstance(scores.get('home'),dict) else scores.get('home')
+                    ass=(scores.get('away') or {}).get('total') if isinstance(scores.get('away'),dict) else scores.get('away')
+                    with st.expander(f"{home.get('name','Heim')} – {away.get('name','Gast')}",expanded=False):
+                        sr_live_card(home.get('name','Heim'),away.get('name','Gast'),f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}",status or 'Geplant',running,finished,home.get('logo'),away.get('logo'))
+                        st.caption('DEL-Torschützen und Einzelspielstatistiken nur bei verlässlicher Verfügbarkeit.')
                     found+=1
-                    teams=game.get("teams") or {}; home=(teams.get("home") or {}).get("name") or "Heim"; away=(teams.get("away") or {}).get("name") or "Gast"
-                    scores=game.get("scores") or {}
-                    hs=(scores.get("home") or {}).get("total") if isinstance(scores.get("home"),dict) else scores.get("home")
-                    ass=(scores.get("away") or {}).get("total") if isinstance(scores.get("away"),dict) else scores.get("away")
-                    live_match_card(home,away,f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}",status or "Geplant",running,status.upper() in ("FT","AOT","AP","FINAL","FINISHED"))
-                    st.caption("Einzelne DEL-Torschützen sind über die vorhandene Datenquelle nicht zuverlässig verfügbar.")
-                if not games: st.caption("Heute keine Begegnungen")
-    if found==0: st.info("Für die Auswahl sind keine passenden Spiele vorhanden.")
-
+    if not found: st.info('Keine passenden Spiele für den ausgewählten Filter.')
 
 st.title("🎯 SportRadar – Torschützen heute & morgen")
 st.caption("Deutsche Zeit · Saison automatisch · Poisson-Modell mit Stichproben-Glättung")
