@@ -289,9 +289,9 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
                 grade=grade_badge("SportRadar-Formindex (eigene Berechnung)",nhl_own_form_grade(form_stats),n)
             else:
                 grade=grade_badge("Formbewertung",None,0)
-            form_html=f'<div class="sr-form"><b>🔥 Aktuelle Form</b><div>{html.escape(detail)}</div>{grade}<div><small>Formwert: {score:.2f} (kein Prozentwert) · Nur vorhandene Spiele zählen</small></div></div>' 
+            form_html=f'<div class="sr-form sr-form-minimal">🔥 {html.escape(detail)}</div>' 
         else:
-            form_html='<div class="sr-form"><b>🔥 Aktuelle Form</b><div>Letzte 5 Einsätze: verlässliche Einzelspieldaten nicht verfügbar</div></div>'
+            form_html=''
     else:
         form_html=''
     portrait=safe_logo(player.get("photo"))
@@ -305,8 +305,9 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
             grade_value=form_stats.get("rating_sum",0)/cnt if cnt else None
         else: grade_value=nhl_own_form_grade(form_stats)
     grade_text=f'{grade_value:.1f}'.replace('.',',') if grade_value is not None else '–'
+    grade_color=("green" if grade_value is not None and grade_value>=8 else "yellow" if grade_value is not None and grade_value>=6 else "red" if grade_value is not None else "unknown")
     league_text=html.escape(str(player.get("league") or ("NHL" if sport=="nhl" else "DEL" if sport=="del" else "Fußball")))
-    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{form_html}</div>''',unsafe_allow_html=True)
+    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{form_html}</div>''',unsafe_allow_html=True)
 
 
 def show_players(players,period_label,sport="hockey"):
@@ -1234,6 +1235,7 @@ def render_form_combo(picks):
             rating=nhl_own_form_grade(form)
             count=form["played"]
             label="SportRadar-Formindex"
+        grade_color=("green" if rating is not None and rating>=8 else "yellow" if rating is not None and rating>=6 else "red" if rating is not None else "unknown")
         rating_text=f"{rating:.1f}".replace(".",",") if rating is not None else "–"
         photo=combo_portrait(p)
         avatar=(f'<img src="{html.escape(photo,quote=True)}" alt="Spielerfoto" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'👤\'">' if photo else '👤')
@@ -1244,11 +1246,12 @@ def render_form_combo(picks):
           <div class="sr-combo-avatar">{avatar}</div>
           <div class="sr-combo-identity"><div class="sr-combo-name"><span class="sr-combo-rank">{index}</span> {name}</div>
           <div class="sr-combo-league">{league} <span>·</span> {team}</div></div>
-          <div class="sr-combo-mini-grade"><small>🔥 {label}</small><strong>{rating_text}<em>/10</em></strong><small>{count} bewertete Einsätze</small></div>
+          <div class="sr-combo-mini-grade sr-grade-{grade_color}"><small>🔥 {label}</small><strong>{rating_text}<em>/10</em></strong><small>{count} bewertete Einsätze</small></div>
         </div>''',unsafe_allow_html=True)
         period_name="1. Halbzeit" if p["sport"]=="football" else "1. Drittel"
         period_value=p.get("half")
         period_detail=f" · {period_name}: {pct(period_value)}" if period_value is not None else ""
+        st.markdown(f'<div class="sr-combo-probs"><div><small>{period_name}</small><strong>{pct(period_value)}</strong></div><div><small>Gesamtspiel</small><strong>{pct(p["adjusted_p"])}</strong></div></div>',unsafe_allow_html=True)
         st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
         favorite_button(p,f"combo_{index}_{p.get('league')}")
@@ -1675,4 +1678,20 @@ st.markdown("""<style>
 .sr-pred-compact .sr-grade{padding:7px!important;margin:5px 0!important}
 .sr-pred-compact .sr-grade-score{font-size:1.25rem!important}
 @media(max-width:480px){.sr-pred-photo{width:55px;height:62px;flex-basis:55px}.sr-pred-head{gap:7px}.sr-pred-grade{flex-basis:77px}}
+</style>""",unsafe_allow_html=True)
+
+# Kompakte Formdarstellung, farbcodierte Bewertung und gut lesbare Chancen.
+st.markdown("""<style>
+.sr-pred-compact .sr-form-minimal{padding:5px 8px!important;margin:4px 0!important;border:0!important;background:#10364a!important;color:#d9f8f4!important;font-size:.72rem!important;line-height:1.4!important}
+.sr-pred-grade.sr-grade-green,.sr-combo-mini-grade.sr-grade-green{border-color:#19c77d!important;background:#063e37!important}
+.sr-pred-grade.sr-grade-green strong,.sr-combo-mini-grade.sr-grade-green strong{color:#5fffc2!important}
+.sr-pred-grade.sr-grade-yellow,.sr-combo-mini-grade.sr-grade-yellow{border-color:#e9b83c!important;background:#483817!important}
+.sr-pred-grade.sr-grade-yellow strong,.sr-combo-mini-grade.sr-grade-yellow strong{color:#ffdb78!important}
+.sr-pred-grade.sr-grade-red,.sr-combo-mini-grade.sr-grade-red{border-color:#f06a66!important;background:#491f2b!important}
+.sr-pred-grade.sr-grade-red strong,.sr-combo-mini-grade.sr-grade-red strong{color:#ff8e89!important}
+.sr-combo-probs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:5px 0 7px}
+.sr-combo-probs>div{background:#4d391a;border:1px solid #e5b84a;border-radius:11px;padding:7px 5px;text-align:center}
+.sr-combo-probs small{display:block;color:#fff3d8;font-size:.78rem}
+.sr-combo-probs strong{display:block;color:#ffe39b;font-size:1.35rem;line-height:1.35}
+.sr-combo-spotlight{margin-bottom:5px!important}
 </style>""",unsafe_allow_html=True)
