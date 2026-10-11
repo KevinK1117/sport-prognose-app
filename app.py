@@ -1218,7 +1218,7 @@ def combo_portrait(player):
     return url
 
 
-def render_form_combo(picks):
+def render_form_combo(picks, view_key="default"):
     if not picks:
         st.info("Keine grünen Torschützen-Kandidaten mit verifizierter Form und Spielzeit gefunden. Es werden keine Tipps ergänzt.")
         return
@@ -1254,8 +1254,8 @@ def render_form_combo(picks):
         st.markdown(f'<div class="sr-combo-probs"><div><small>{period_name}</small><strong>{pct(period_value)}</strong></div><div><small>Gesamtspiel</small><strong>{pct(p["adjusted_p"])}</strong></div></div>',unsafe_allow_html=True)
         st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
-        favorite_button(p,f"combo_{index}_{p.get('league')}")
-        combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
+        favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
+        combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
     st.metric("Ausgewählte Tipps",len(picks))
     if len(picks)>1:
         chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
@@ -1305,7 +1305,7 @@ def combo_view(day,sport,league):
                 ranked=multi_league_form_combo(day,mode)
             if len(ranked)<amount:
                 st.warning(f"Nur {len(ranked)} geeignete grüne Tipps gefunden; keine Tipps werden erfunden.")
-            render_form_combo(ranked[:amount])
+            render_form_combo(ranked[:amount], "daily")
     with tab_all:
         st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Höchste grüne Torprognose aus den Top 5 jeder Mannschaft")
         st.caption("Bewertet werden echte letzte fünf Einsätze inklusive Tore, Schüsse und Spielzeit/Eiszeit. Nur grüne Tipps; maximal zwei je Begegnung.")
@@ -1315,7 +1315,7 @@ def combo_view(day,sport,league):
         if st.session_state.get("form_day")==str(day):
             with st.spinner("Echte Einzelspiel-Statistiken abrufen und Form bewerten … Dies kann mehrere Minuten dauern und API-Kontingent verbrauchen."):
                 picks=all_leagues_form_combo(day)
-            render_form_combo(picks)
+            render_form_combo(picks, "all")
     with tab_mixed:
         st.markdown("**⚽🏒 Mixed Tages-Kombi: Fußball + Eishockey aus allen 9 Ligen**")
         mixed_amount=st.select_slider(
@@ -1330,7 +1330,7 @@ def combo_view(day,sport,league):
                 ranked=multi_league_form_combo(day,"mixed")
             if len(ranked)<mixed_amount:
                 st.warning(f"Nur {len(ranked)} geeignete grüne Tipps verfügbar; keine Tipps werden ergänzt.")
-            render_form_combo(ranked[:mixed_amount])
+            render_form_combo(ranked[:mixed_amount], "mixed")
     with tab_check:
         st.write("Prüfe einen fremden oder eigenen Tipp anhand der SportRadar-Statistik. Anbieterquoten werden **nicht automatisch abgerufen**.")
         provider=st.selectbox("Buchmacher",["Tipico","bet365","Winamax","Pinnacle","Andere"])
