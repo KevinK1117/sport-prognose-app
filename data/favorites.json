@@ -61,5 +61,12 @@
     "league": "",
     "player_id": 85041,
     "team_id": 81
+  },
+  "NHL:8482713:Mackie Samoskevich": {
+    "name": "Mackie Samoskevich",
+    "team": "SEA",
+    "league": "NHL",
+    "player_id": 8482713,
+    "team_id": null
   }
 }
