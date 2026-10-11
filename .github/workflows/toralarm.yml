@@ -22,9 +22,16 @@ jobs:
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-      - name: Persist processed goals
+            - name: Persist processed goals
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/toralarm_state.json
-          git diff --cached --quiet || (git commit -m 'Update SportRadar toralarm state' && git push)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f data/toralarm_state.json ]; then
+            git add data/toralarm_state.json
+            if ! git diff --cached --quiet; then
+              git commit -m "Update toralarm state"
+              git push
+            fi
+          else
+            echo "Noch keine Tore verarbeitet – keine Statusdatei vorhanden."
+          fi
