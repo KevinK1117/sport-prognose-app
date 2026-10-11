@@ -264,7 +264,7 @@ def nhl_own_form_grade(stats):
 def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
     tier=probability_tier(player.get("p"),sport)
     name=html.escape(str(player["name"])); team=html.escape(str(player["team"]))
-    pills=[f'{player["goals"]} Tore',f'{player["games"]} Spiele']
+    pills=[f'Position: {player.get("position") or "Unbekannt"}',f'{player["goals"]} Tore',f'{player["games"]} Spiele']
     if player.get("shots") is not None: pills.append(f'{player["shots"]} Schüsse')
     if player.get("minutes") is not None: pills.append(f'{player["minutes"]:.0f} Min Ø')
     chips="".join('<span class="pill">'+html.escape(str(item))+"</span>" for item in pills)
@@ -300,11 +300,12 @@ def show_players(players,period_label,sport="hockey"):
         for p in players:
             stats=player_form_details(p,sport,day)
             show_player(p,period_label,sport,stats,True)
+            favorite_button(p,f"card_{sport}_{p.get('team')}_{p.get('name')}")
     with tab2:
         table=[]
         for p in players:
             minutes=p.get("minutes")
-            table.append({"Spieler":p["name"],"Team":p["team"],period_label:pct(p.get("half")),"Gesamtspiel":pct(p.get("p")),"Tore":p["goals"],"Spiele":p["games"],"Schüsse":p.get("shots"),"Min Ø":round(minutes,1) if minutes is not None else None})
+            table.append({"Spieler":p["name"],"Team":p["team"],"Position":p.get("position"),period_label:pct(p.get("half")),"Gesamtspiel":pct(p.get("p")),"Tore":p["goals"],"Spiele":p["games"],"Schüsse":p.get("shots"),"Min Ø":round(minutes,1) if minutes is not None else None})
         st.dataframe(pd.DataFrame(table),hide_index=True,use_container_width=True)
 
 
@@ -343,7 +344,7 @@ def football_players(league_id,year,team_id,key):
                 total_goals=goals.get("total") or 0; total_minutes=games.get("minutes")
                 avg_minutes=total_minutes/apps if isinstance(total_minutes,(int,float)) and total_minutes>0 else None
                 ident=player.get("id") or player.get("name")
-                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","goals":total_goals,"games":apps,"shots":shots.get("total"),"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
+                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","position":games.get("position") or "Unbekannt","goals":total_goals,"games":apps,"shots":shots.get("total"),"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
         if len(rows)<20: break
     return list(result.values())
 
@@ -370,6 +371,7 @@ def football_view(day,league):
                 hp=football_players(LEAGUES[league],year,home.get("id"),key)
                 ap=football_players(LEAGUES[league],year,away.get("id"),key)
             if hp is None or ap is None: st.warning("Spielerstatistiken nicht vollständig verfügbar."); continue
+            display_football_lineup(fixture.get("id"),home.get("name"),away.get("name"),key)
             show_match_teams(home.get("name","Heim"),home.get("logo"),hp,away.get("name","Gast"),away.get("logo"),ap,"1. Halbzeit",f'football_{league}_{day}_{fixture.get("id",home.get("id"))}',sport="football")
 
 
@@ -384,7 +386,7 @@ def nhl_skaters(abbrev):
         goals=item.get("goals") or 0; first=item.get("firstName") or {}; last=item.get("lastName") or {}
         if isinstance(first,dict): first=first.get("default","")
         if isinstance(last,dict): last=last.get("default","")
-        result.append({"name":f"{first} {last}".strip() or "Unbekannt","player_id":item.get("playerId") or item.get("id"),"team":abbrev,"goals":goals,"games":games,"shots":item.get("shots"),"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
+        result.append({"name":f"{first} {last}".strip() or "Unbekannt","player_id":item.get("playerId") or item.get("id"),"team":abbrev,"position":item.get("positionCode") or item.get("position") or "Unbekannt","goals":goals,"games":games,"shots":item.get("shots"),"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
     return result
 
 
@@ -450,7 +452,7 @@ def del_player_estimates():
         games=safe_int(item.get("games")); goals=safe_int(item.get("goals"))
         if not name or not team_id or not games or goals is None: continue
         team_name=names.get(team_id) or item.get("team") or DEL_TEAMS.get(team_id) or team_id
-        players.append({"name":name,"team":team_name,"team_id":team_id,"games":games,"goals":goals,"shots":None,"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
+        players.append({"name":name,"team":team_name,"team_id":team_id,"position":item.get("position") or "Unbekannt","games":games,"goals":goals,"shots":None,"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
     return sorted(players,key=lambda p:p.get("p") or 0,reverse=True)
 
 
@@ -501,6 +503,76 @@ def del_view(day):
         st.dataframe(pd.DataFrame([{"Kennung":tid,"Mannschaft":name,"Spieler mit Saisonspielen":sum(p["team_id"]==tid for p in players)} for tid,name in DEL_TEAMS.items()]),hide_index=True,use_container_width=True)
 
 
+def kickoff_info(game, league):
+    """Return Berlin-local future kickoff or None if started, final, or unknown."""
+    now=datetime.now(TZ)
+    try:
+        if league=="NHL":
+            status=str(game.get("gameState") or "").upper()
+            if status in ("LIVE","CRIT","FINAL","OFF"): return None
+            raw=game.get("startTimeUTC")
+            kickoff=datetime.fromisoformat(raw.replace("Z","+00:00")).astimezone(TZ)
+        elif league=="DEL":
+            status=str((game.get("status") or {}).get("short") if isinstance(game.get("status"),dict) else game.get("status") or "").upper()
+            if status in ("LIVE","FT","AOT","AP","FINISHED","FINAL","1P","2P","3P","OT","PEN"): return None
+            raw=game.get("date")
+            if isinstance(game.get("timestamp"),(int,float)):
+                kickoff=datetime.fromtimestamp(game["timestamp"],TZ)
+            else:
+                kickoff=datetime.fromisoformat(raw.replace("Z","+00:00")).astimezone(TZ)
+        else:
+            fixture=game.get("fixture") or {}
+            status=str((fixture.get("status") or {}).get("short") or "").upper()
+            if status not in ("NS","TBD"): return None
+            if fixture.get("timestamp"):
+                kickoff=datetime.fromtimestamp(fixture["timestamp"],TZ)
+            else:
+                kickoff=datetime.fromisoformat(fixture["date"].replace("Z","+00:00")).astimezone(TZ)
+        if kickoff<=now: return None
+        return kickoff
+    except (ValueError,TypeError,KeyError,OverflowError,AttributeError,OSError):
+        return None
+
+
+def favorite_key(player):
+    return f"{player.get('league') or player.get('sport','')}:{player.get('player_id') or player.get('team','')}:{player.get('name','')}"
+
+
+def favorite_button(player, prefix):
+    favorites=st.session_state.setdefault("sr_favorites",{})
+    key=favorite_key(player)
+    label="⭐ Favorisiert" if key in favorites else "☆ Favorisieren"
+    if st.button(label,key=f"fav_{prefix}_{abs(hash(key))}"):
+        if key in favorites: del favorites[key]
+        else: favorites[key]={"name":player.get("name"),"team":player.get("team"),"league":player.get("league") or player.get("sport"),"player_id":player.get("player_id")}
+        st.rerun()
+
+
+@st.cache_data(ttl=300,show_spinner=False)
+def football_confirmed_lineup(fixture_id,key):
+    if not fixture_id or not key: return None
+    rows=api("fixtures/lineups",{"fixture":fixture_id},key=key)
+    return rows if isinstance(rows,list) and rows else None
+
+
+def display_football_lineup(fixture_id,home_name,away_name,key):
+    with st.expander("👥 Aufstellung (bestätigt, sobald verfügbar)",expanded=False):
+        rows=football_confirmed_lineup(fixture_id,key)
+        if not rows:
+            st.info("Noch keine bestätigte Aufstellung vom Datenanbieter. Eine voraussichtliche Startelf wird ohne belastbare Quelle nicht erfunden.")
+            return
+        for team in rows:
+            team_name=(team.get("team") or {}).get("name") or "Mannschaft"
+            formation=team.get("formation") or "Formation unbekannt"
+            st.markdown(f"**{team_name} · {formation}**")
+            for section,label in (("startXI","Startelf"),("substitutes","Bank")):
+                names=[]
+                for item in team.get(section) or []:
+                    player=item.get("player") or {}
+                    names.append(f"{player.get('name','?')} ({player.get('pos') or '?'})")
+                st.caption(f"{label}: "+(", ".join(names) if names else "Keine Angaben"))
+
+
 def combo_candidates(day, sport, league):
     """Use only players from fixtures scheduled for the selected date."""
     candidates=[]
@@ -510,6 +582,8 @@ def combo_candidates(day, sport, league):
         if games is None:
             games=api("fixtures",{"league":LEAGUES[league],"season":year,"date":day.isoformat(),"timezone":"Europe/Berlin"},key=secret("API_SPORTS_KEY"))
         for game in (games or []):
+            kickoff=kickoff_info(game,league)
+            if kickoff is None: continue
             teams=game.get("teams") or {}
             home=teams.get("home") or {}; away=teams.get("away") or {}
             fixture_id=(game.get("fixture") or {}).get("id")
@@ -517,30 +591,34 @@ def combo_candidates(day, sport, league):
                 players=football_players(LEAGUES[league],year,team.get("id"),secret("API_SPORTS_KEY")) if secret("API_SPORTS_KEY") else []
                 for player in (players or []):
                     if player.get("games",0)>=3 and player.get("p") is not None:
-                        candidates.append({**player,"sport":"football","league":league,"match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(fixture_id or f'{home.get("id")}-{away.get("id")}')})
+                        candidates.append({**player,"sport":"football","league":league,"kickoff":kickoff.isoformat(),"match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(fixture_id or f'{home.get("id")}-{away.get("id")}')})
     elif league=="NHL":
         games=fixtures_for("nhl",day)
         if games is None: games=nhl("score/"+day.isoformat())
         for game in (games or {}).get("games",[]):
+            kickoff=kickoff_info(game,"NHL")
+            if kickoff is None: continue
             home=game.get("homeTeam") or {}; away=game.get("awayTeam") or {}
             for team in (home,away):
                 players=nhl_skaters(team.get("abbrev")) if team.get("abbrev") else []
                 for player in (players or []):
                     if player.get("games",0)>=3 and player.get("p") is not None:
-                        candidates.append({**player,"sport":"hockey","league":"NHL","match":f'{nhl_team_name(home)} – {nhl_team_name(away)}',"fixture":str(game.get("id") or f'{home.get("abbrev")}-{away.get("abbrev")}')})
+                        candidates.append({**player,"sport":"hockey","league":"NHL","kickoff":kickoff.isoformat(),"match":f'{nhl_team_name(home)} – {nhl_team_name(away)}',"fixture":str(game.get("id") or f'{home.get("abbrev")}-{away.get("abbrev")}')})
     else:
         games=fixtures_for("del",day)
         if games is None: games=api("games",{"league":secret("DEL_LEAGUE_ID") or "19","season":season(day,"DEL"),"date":day.isoformat(),"timezone":"Europe/Berlin"},provider="hockey",key=secret("API_SPORTS_KEY"))
         mapping=del_team_mapping()
         players=del_player_estimates()
         for game in (games or []):
+            kickoff=kickoff_info(game,"DEL")
+            if kickoff is None: continue
             teams=game.get("teams") or {}
             home=teams.get("home") or {}; away=teams.get("away") or {}
             home_id=mapping.get(normalize_team(home.get("name")))
             away_id=mapping.get(normalize_team(away.get("name")))
             for player in players:
                 if player.get("team_id") in (home_id,away_id) and player.get("games",0)>=3:
-                    candidates.append({**player,"sport":"hockey","league":"DEL","match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(game.get("id") or f'{home_id}-{away_id}')})
+                    candidates.append({**player,"sport":"hockey","league":"DEL","kickoff":kickoff.isoformat(),"match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(game.get("id") or f'{home_id}-{away_id}')})
     return sorted(candidates,key=lambda x:x.get("p") or 0,reverse=True)
 
 
@@ -676,6 +754,9 @@ def rank_candidates_by_verified_form(pool,day):
     """Choose up to two highest adjusted green scorers per fixture from each team's top five."""
     teams={}
     for player in pool:
+        try:
+            if datetime.fromisoformat(player["kickoff"])<=datetime.now(TZ): continue
+        except (KeyError,ValueError,TypeError): continue
         team_key=(player["league"],player["fixture"],str(player.get("team_id") or player["team"]))
         teams.setdefault(team_key,[]).append(player)
     football_forms={}
@@ -734,7 +815,7 @@ def render_form_combo(picks):
         avg_minutes=(form.get("minutes") or 0)/form["played"]
         unit="Eiszeit" if p["sport"]=="hockey" else "Spielzeit"
         st.markdown(f'**{index}. 🟢 {html.escape(p["name"])}** · {html.escape(p["team"])} · {p["league"]}')
-        st.caption(f'{p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse, Ø {avg_minutes:.1f} Min. {unit}')
+        st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse, Ø {avg_minutes:.1f} Min. {unit}')
         if p["sport"]=="football":
             rating_count=form.get("rating_count",0)
             rating=form.get("rating_sum",0)/rating_count if rating_count else None
@@ -746,7 +827,8 @@ def render_form_combo(picks):
             label="SportRadar-Formindex (eigene Berechnung)"
             official=False
         st.markdown(grade_badge(label,rating,rating_count,official=official),unsafe_allow_html=True)
-        st.caption(f'🔥 Formwert: {form_score(form,p["sport"]):.2f} · Letzte {form["played"]} Einsätze')
+        st.caption(f'🔥 Formwert: {form_score(form,p["sport"]):.2f} · Letzte {form["played"]} Einsätze · Position: {p.get("position") or "Unbekannt"}')
+        favorite_button(p,f"combo_{index}_{p.get('league')}")
     st.metric("Ausgewählte Tipps",len(picks))
     if len(picks)>1:
         chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
@@ -853,7 +935,7 @@ def combo_view(day,sport,league):
 
 st.title("🎯 SportRadar – Torschützen heute & morgen")
 st.caption("Deutsche Zeit · Saison automatisch · Poisson-Modell mit Stichproben-Glättung")
-page=st.radio("Bereich",["🎯 Torprognosen","🎟️ Kombi & Prüfung"],horizontal=True)
+page=st.radio("Bereich",["🎯 Torprognosen","🎟️ Kombi & Prüfung","⭐ Favoriten"],horizontal=True)
 sport=st.radio("Sportart",["🏒 Eishockey","⚽ Fußball"],horizontal=True)
 leagues=["NHL","DEL"] if sport.startswith("🏒") else list(LEAGUES)
 league=st.selectbox("Liga",leagues)
@@ -871,7 +953,16 @@ if st.button("🔄 Daten neu laden"):
     st.cache_data.clear(); st.rerun()
 if page.startswith("🎯"):
     st.caption("🔥 Aktuelle Form automatisch: Fußball mit API-Football-Bewertungen; NHL und DEL mit eigenem SportRadar-Formindex, soweit Einzelspieldaten vorhanden sind.")
-if page.startswith("🎟️"):
+if page.startswith("⭐"):
+    st.subheader("⭐ Meine Favoriten")
+    st.caption("Favoriten sind in dieser Version nur für die aktuelle Streamlit-Sitzung gespeichert. Echte Push-Mitteilungen bei Toren benötigen einen Hintergrunddienst und einen Push-Anbieter.")
+    favorites=st.session_state.setdefault("sr_favorites",{})
+    if not favorites: st.info("Noch keine Spieler favorisiert. In den Spielerkarten auf ☆ Favorisieren tippen.")
+    for key,entry in list(favorites.items()):
+        st.markdown(f"**⭐ {entry.get('name')}** · {entry.get('team')} · {entry.get('league')}")
+        if st.button("Entfernen",key=f"remove_{abs(hash(key))}"):
+            del favorites[key]; st.rerun()
+elif page.startswith("🎟️"):
     combo_view(day,sport,league)
 elif sport.startswith("🏒"):
     if league=="NHL": nhl_view(day)
