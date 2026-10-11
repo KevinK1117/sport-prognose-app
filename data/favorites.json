@@ -47,5 +47,12 @@
     "league": "",
     "player_id": 1100,
     "team_id": 50
+  },
+  ":137302:C. Archer": {
+    "name": "C. Archer",
+    "team": "Auxerre",
+    "league": "",
+    "player_id": 137302,
+    "team_id": 108
   }
 }
