@@ -60,6 +60,7 @@ st.markdown("""<style>
 @media(max-width:480px){.sr-match-logo{width:49px;height:49px}.sr-match{gap:4px;padding:7px 0}.sr-team-heading{font-size:1.02rem}}
 </style>""", unsafe_allow_html=True)
 st.markdown('<style>\n.sr-lineup-wrap{margin:12px 0 18px;border:1px solid #d9e5eb;border-radius:17px;padding:10px;background:white}\n.sr-lineup-title{text-align:center;font-size:.85rem;font-weight:750;color:#17324b;margin:4px 0 12px}\n.sr-lineup-field{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:space-around;gap:14px;padding:18px 5px;min-height:480px;overflow:hidden;border:3px solid #fff;border-radius:12px}\n.sr-lineup-pitch{background:repeating-linear-gradient(0deg,#2c885d 0px,#2c885d 70px,#368e64 70px,#368e64 140px)}\n.sr-lineup-rink{background:linear-gradient(90deg,transparent 30%,#93c7e544 30%,#93c7e544 31%,transparent 31%,transparent 69%,#93c7e544 69%,#93c7e544 70%,transparent 70%),#f0f9ff;border-color:#7caac5}\n.sr-lineup-field:before{content:"";position:absolute;inset:12px;border:2px solid #ffffff88;border-radius:3px;pointer-events:none;z-index:-1}\n.sr-lineup-field:after{content:"";position:absolute;top:50%;left:0;right:0;border-top:2px solid #ffffff77;pointer-events:none;z-index:-1}\n.sr-lineup-row{display:flex;justify-content:space-around;align-items:center;gap:2px;width:100%}\n.sr-lineup-person{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;text-align:center;gap:3px}\n.sr-lineup-avatar{background:#ffffffed;border-radius:50%;width:31px;height:31px;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 2px 5px #0002}\n.sr-lineup-name{font-size:clamp(.60rem,2.3vw,.82rem);line-height:1.15;font-weight:750;background:#fffffff2;color:#17324b;border-radius:6px;padding:4px 3px;max-width:100%;overflow-wrap:anywhere;box-shadow:0 2px 5px #0002}\n.sr-lineup-pos{font-size:.65rem;font-weight:650;color:#17324b;background:#ffffffb9;border-radius:5px;padding:1px 5px}\n.sr-lineup-bench{padding:10px 2px}.sr-lineup-bench-list{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}.sr-lineup-bench-list .sr-lineup-person{flex:0 1 100px}\n@media(max-width:480px){.sr-lineup-field{min-height:410px}.sr-lineup-avatar{width:27px;height:27px;font-size:16px}.sr-lineup-name{font-size:.61rem}}\n</style>',unsafe_allow_html=True)
+st.markdown("<style>"+'\n/* SportRadar 2026: vivid, compact mobile-first dashboard */\n[data-testid="stAppViewContainer"]{background:linear-gradient(160deg,#07192c 0%,#0d2b45 260px,#f2f7fb 600px,#f2f7fb 100%)!important}\n.block-container{max-width:1080px;padding-top:1rem!important}\nh1{color:#fff!important;font-weight:850!important;letter-spacing:-.04em!important;text-shadow:0 2px 8px #06152455}\nh1+p, h1~[data-testid="stCaptionContainer"]{color:#c9e8f5!important}\n[data-testid="stRadio"] label,[data-testid="stSelectbox"] label,[data-testid="stMultiSelect"] label{font-weight:700}\n[data-testid="stRadio"] [role="radiogroup"]{gap:.35rem;flex-wrap:wrap}\n[data-testid="stRadio"] [role="radio"]{accent-color:#fa315d}\n[data-testid="stExpander"]{border:1px solid #d5e4f0!important;border-radius:19px!important;background:#fff!important;box-shadow:0 8px 25px #102b4410!important;margin-bottom:12px}\n[data-testid="stExpander"] summary{background:linear-gradient(90deg,#e9f5fc,#f5faff)!important;color:#15334d!important;font-weight:750!important;padding:12px!important}\n.stButton>button{background:linear-gradient(110deg,#e8faff,#fff)!important;border:1px solid #61b8ca!important;color:#076478!important;border-radius:13px!important}\n.stButton>button[kind="primary"]{background:linear-gradient(105deg,#fc315b,#ee5c49)!important;color:#fff!important;border:0!important}\n.player{background:linear-gradient(135deg,#fff,#f2f9ff)!important;box-shadow:0 6px 18px #1839570d!important}\n.sr-live-card{background:#fff;border:1px solid #dbe8f1;border-radius:15px;margin:9px 0;padding:12px 13px;box-shadow:0 3px 12px #112b4110}\n.sr-live-card.is-running{border-left:5px solid #fb2b58;background:linear-gradient(100deg,#fff,#fff5f7)}\n.sr-live-card.is-finished{border-left:5px solid #16a878}\n.sr-live-card.is-upcoming{border-left:5px solid #8fa6b8}\n.sr-live-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}\n.sr-live-team{font-weight:750;font-size:.9rem;color:#16334e;overflow-wrap:anywhere}\n.sr-live-team:last-child{text-align:right}\n.sr-live-score{background:#09283e;color:#fff;border-radius:11px;padding:7px 10px;font-weight:850;font-size:1.24rem;white-space:nowrap;font-variant-numeric:tabular-nums}\n.sr-live-state{margin-top:6px;color:#52667a;font-size:.8rem;font-weight:650}\n.sr-live-scorer{margin-top:7px;padding:6px 9px;border-radius:9px;background:#f0f7fb;font-size:.82rem;color:#24506a}\n.sr-hero{padding:15px 18px;border-radius:19px;background:linear-gradient(110deg,#fa2458,#b91664 55%,#093a6d);color:white;box-shadow:0 8px 22px #152a4933;margin:10px 0 16px}\n.sr-hero strong{font-size:1.25rem}.sr-hero small{display:block;color:#ffe3ec;margin-top:4px}\n.sr-combo-profile{border:1px solid #cbe4f0;border-radius:15px;padding:12px;background:#f4fbff;margin:9px 0 14px}\n@media(max-width:550px){.sr-live-card{padding:10px}.sr-live-team{font-size:.81rem}.sr-live-score{font-size:1.05rem;padding:6px}.block-container{padding-left:.75rem!important;padding-right:.75rem!important}}\n'+"</style>",unsafe_allow_html=True)
 TZ = ZoneInfo("Europe/Berlin")
 LEAGUES = {"Bundesliga":78,"2. Bundesliga":79,"La Liga":140,"Serie A":135,"Premier League":39,"Ligue 1":61,"MLS":253}
 DEL_TEAMS = {"team_1":"ERC Ingolstadt","team_2":"Adler Mannheim","team_3":"Eisbären Berlin","team_5":"Krefeld Pinguine","team_6":"Straubing Tigers","team_7":"Iserlohn Roosters","team_8":"Grizzlys Wolfsburg","team_9":"Pinguins Bremerhaven","team_11":"Kölner Haie","team_12":"EHC Red Bull München","team_13":"Augsburger Panther","team_14":"Nürnberg Ice Tigers","team_15":"Schwenninger Wild Wings","team_44":"Löwen Frankfurt"}
@@ -1154,6 +1155,44 @@ def all_leagues_form_combo(day):
     return multi_league_form_combo(day, "mixed")
 
 
+def combo_player_details(player,day,uid):
+    """Inline player drill-down without navigating away from the coupon."""
+    if st.button("📊 Spielerhistorie & Aufstellung öffnen",key=f"profile_{uid}"):
+        state=f"sr_profile_{uid}"
+        st.session_state[state]=not st.session_state.get(state,False)
+    if not st.session_state.get(f"sr_profile_{uid}"):
+        return
+    st.markdown('<div class="sr-combo-profile"><b>📊 Spielerprofil · Form & Mannschaft</b></div>',unsafe_allow_html=True)
+    stats=player.get("form") or player_form_details(player,"football" if player.get("sport")=="football" else ("del" if player.get("league")=="DEL" else "nhl"),day)
+    show_player(player,"1. Halbzeit" if player.get("sport")=="football" else "1. Drittel", "football" if player.get("sport")=="football" else ("del" if player.get("league")=="DEL" else "nhl"),stats,True)
+    st.caption(f"Saisonhistorie: {player.get('games',0)} Spiele · {player.get('goals',0)} Tore · {player.get('shots') if player.get('shots') is not None else '–'} Schüsse")
+    if player.get("sport")=="football":
+        fid=player.get("fixture")
+        try: fid=int(fid)
+        except (TypeError,ValueError): fid=None
+        if fid:
+            st.markdown("**👥 Aufstellungen der Begegnung**")
+            st.caption("Bestätigte Elf, falls vom Anbieter verfügbar; andernfalls statistische Erwartung aus früheren Aufstellungen.")
+            key=secret("API_SPORTS_KEY")
+            if key:
+                rows=football_confirmed_lineup(fid,key)
+                if rows:
+                    for team in rows:
+                        team_name=(team.get("team") or {}).get("name") or "Mannschaft"
+                        st.success(f"Bestätigt: {team_name} · {team.get('formation') or 'Formation unbekannt'}")
+                        st.write(", ".join((item.get("player") or {}).get("name","?") for item in team.get("startXI") or []))
+                elif player.get("team_id"):
+                    if st.button("🔎 Voraussichtliche Elf berechnen",key=f"expected_combo_{uid}"):
+                        expected=football_expected_lineup(player["team_id"],day,key)
+                        if expected:
+                            st.info(f"Statistische Startelf aus {expected['samples']} früheren Aufstellungen · Formation {expected.get('formation') or 'unbekannt'}")
+                            st.write(", ".join(p["name"] for p in expected["players"]))
+                            st.caption("Verletzungen, Sperren und Rotation können die Erwartung verändern.")
+                        else: st.warning("Zu wenige Aufstellungsdaten verfügbar.")
+    else:
+        st.caption("Für NHL/DEL stehen hier Spielerhistorie und Form zur Verfügung. Verifizierte Spielaufstellungen sind nicht für jede Begegnung abrufbar.")
+
+
 def render_form_combo(picks):
     if not picks:
         st.info("Keine grünen Torschützen-Kandidaten mit verifizierter Form und Spielzeit gefunden. Es werden keine Tipps ergänzt.")
@@ -1178,6 +1217,7 @@ def render_form_combo(picks):
         st.markdown(grade_badge(label,rating,rating_count,official=official),unsafe_allow_html=True)
         st.caption(f'🔥 Formwert: {form_score(form,p["sport"]):.2f} · Letzte {form["played"]} Einsätze · Position: {p.get("position") or "Unbekannt"}')
         favorite_button(p,f"combo_{index}_{p.get('league')}")
+        combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
     st.metric("Ausgewählte Tipps",len(picks))
     if len(picks)>1:
         chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
@@ -1338,8 +1378,18 @@ def live_del_games(date, key, league_id):
                          "timezone": "Europe/Berlin"}, provider="hockey", key=key)
 
 
+def live_match_card(home,away,score,state,running=False,finished=False,scorers=None):
+    css_class="is-running" if running else "is-finished" if finished else "is-upcoming"
+    st.markdown(f'<div class="sr-live-card {css_class}"><div class="sr-live-row"><span class="sr-live-team">{html.escape(str(home))}</span><span class="sr-live-score">{html.escape(str(score))}</span><span class="sr-live-team">{html.escape(str(away))}</span></div><div class="sr-live-state">{html.escape(str(state))}</div></div>',unsafe_allow_html=True)
+    if scorers is None: return
+    if isinstance(scorers,list) and scorers:
+        for scorer in scorers:
+            st.markdown(f'<div class="sr-live-scorer">⚽ {html.escape(str(scorer))}</div>',unsafe_allow_html=True)
+    elif isinstance(scorers,str): st.caption(scorers)
+
+
 def live_view(day):
-    st.subheader("🔴 Live-Ergebnisse & Torschützen")
+    st.markdown('<div class="sr-hero"><strong>🔴 LIVE-ERGEBNISSE</strong><small>Alle Spiele · Spielstände · Torschützen</small></div>',unsafe_allow_html=True)
     st.caption("Live-Abfrage beim jeweiligen Datenanbieter · Uhrzeiten in Deutschland · automatische Aktualisierung nur beim Neuladen")
     selected=st.multiselect("Ligen anzeigen",list(LEAGUES)+["NHL","DEL"],default=list(LEAGUES)+["NHL","DEL"],key="live_leagues")
     only_live=st.checkbox("Nur laufende Spiele",value=False,key="live_only_running")
@@ -1370,7 +1420,7 @@ def live_view(day):
                     score=f"{goals.get('home') if goals.get('home') is not None else '–'} : {goals.get('away') if goals.get('away') is not None else '–'}"
                     elapsed=(fixture.get("status") or {}).get("elapsed")
                     state=f"🔴 {elapsed}'" if running and elapsed is not None else ("🔴 Live" if running else "✅ Ende" if finished else "⏳ "+str(status))
-                    st.markdown(f"**{html.escape(str(home))} {score} {html.escape(str(away))}** · {state}")
+                    live_match_card(home,away,score,state,running,finished)
                     if (running or finished) and fixture.get("id"):
                         scorers=live_football_scorers(fixture["id"],key)
                         if scorers is None: st.caption("Torschützen momentan nicht abrufbar")
@@ -1393,7 +1443,7 @@ def live_view(day):
                     home=game.get("homeTeam") or {}; away=game.get("awayTeam") or {}
                     hs=home.get("score"); ass=away.get("score")
                     score=f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}"
-                    st.markdown(f"**{html.escape(nhl_team_name(home))} {score} {html.escape(nhl_team_name(away))}** · {'🔴 Live' if running else '✅ Ende' if finished else '⏳ Geplant'}")
+                    live_match_card(nhl_team_name(home),nhl_team_name(away),score,"🔴 Live" if running else "✅ Ende" if finished else "⏳ Geplant",running,finished)
                     if (running or finished) and game.get("id"):
                         scorers=live_nhl_scorers(game["id"])
                         if scorers is None: st.caption("Torschützen momentan nicht abrufbar")
@@ -1417,7 +1467,7 @@ def live_view(day):
                     scores=game.get("scores") or {}
                     hs=(scores.get("home") or {}).get("total") if isinstance(scores.get("home"),dict) else scores.get("home")
                     ass=(scores.get("away") or {}).get("total") if isinstance(scores.get("away"),dict) else scores.get("away")
-                    st.markdown(f"**{html.escape(str(home))} {hs if hs is not None else '–'} : {ass if ass is not None else '–'} {html.escape(str(away))}** · {html.escape(status or 'Geplant')}")
+                    live_match_card(home,away,f"{hs if hs is not None else '–'} : {ass if ass is not None else '–'}",status or "Geplant",running,status.upper() in ("FT","AOT","AP","FINAL","FINISHED"))
                     st.caption("Einzelne DEL-Torschützen sind über die vorhandene Datenquelle nicht zuverlässig verfügbar.")
                 if not games: st.caption("Heute keine Begegnungen")
     if found==0: st.info("Für die Auswahl sind keine passenden Spiele vorhanden.")
