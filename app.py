@@ -3,6 +3,7 @@
 
 """SportRadar – football, NHL and DEL goalscorer estimates."""
 import html
+import base64
 import json
 import math
 import os
@@ -534,18 +535,78 @@ def kickoff_info(game, league):
         return None
 
 
+def github_favorites_config():
+    token=secret("GH_FAVORITES_TOKEN")
+    repo=secret("GH_FAVORITES_REPO") or "KevinK1117/sport-prognose-app"
+    return token,repo
+
+
+def load_persistent_favorites():
+    token,repo=github_favorites_config()
+    if not token: return None
+    try:
+        response=requests.get(f"https://api.github.com/repos/{repo}/contents/data/favorites.json",
+            headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json"},timeout=15)
+        if response.status_code==404: return {},None
+        response.raise_for_status()
+        data=response.json()
+        content=json.loads(base64.b64decode(data["content"]).decode("utf-8"))
+        return (content if isinstance(content,dict) else {}),data.get("sha")
+    except (requests.RequestException,ValueError,KeyError,UnicodeDecodeError):
+        return None
+
+
+def save_persistent_favorites(favorites,sha):
+    token,repo=github_favorites_config()
+    if not token: return False
+    body={"message":"Update SportRadar favorites","content":base64.b64encode(
+        json.dumps(favorites,ensure_ascii=False,indent=2).encode("utf-8")).decode("ascii")}
+    if sha: body["sha"]=sha
+    try:
+        response=requests.put(f"https://api.github.com/repos/{repo}/contents/data/favorites.json",
+            headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json"},json=body,timeout=20)
+        response.raise_for_status()
+        return True
+    except requests.RequestException: return False
+
+
+def current_favorites():
+    if "sr_favorites" not in st.session_state:
+        stored=load_persistent_favorites()
+        st.session_state["sr_favorites"]=stored[0] if stored is not None else {}
+        st.session_state["sr_favorites_sha"]=stored[1] if stored is not None else None
+    return st.session_state["sr_favorites"]
+
+
+def update_favorites(favorites):
+    if secret("GH_FAVORITES_TOKEN"):
+        # Reload SHA to avoid overwriting a stale revision.
+        stored=load_persistent_favorites()
+        if stored is None or not save_persistent_favorites(favorites,stored[1]):
+            st.error("Favorit konnte nicht dauerhaft auf GitHub gespeichert werden. Token und Berechtigungen prüfen.")
+            return False
+    st.session_state["sr_favorites"]=favorites
+    return True
+
+
 def favorite_key(player):
-    return f"{player.get('league') or player.get('sport','')}:{player.get('player_id') or player.get('team','')}:{player.get('name','')}"
+    league=player.get("league") or player.get("sport","")
+    return f"{league}:{player.get('player_id') or player.get('team','')}:{player.get('name','')}"
 
 
 def favorite_button(player, prefix):
-    favorites=st.session_state.setdefault("sr_favorites",{})
+    favorites=current_favorites()
     key=favorite_key(player)
     label="⭐ Favorisiert" if key in favorites else "☆ Favorisieren"
     if st.button(label,key=f"fav_{prefix}_{abs(hash(key))}"):
-        if key in favorites: del favorites[key]
-        else: favorites[key]={"name":player.get("name"),"team":player.get("team"),"league":player.get("league") or player.get("sport"),"player_id":player.get("player_id")}
-        st.rerun()
+        new=dict(favorites)
+        if key in new: del new[key]
+        else:
+            league=player.get("league") or player.get("sport")
+            if league in ("hockey", "nhl") and player.get("player_id"): league="NHL"
+            new[key]={"name":player.get("name"),"team":player.get("team"),
+                      "league":league,"player_id":player.get("player_id"),"team_id":player.get("team_id")}
+        if update_favorites(new): st.rerun()
 
 
 @st.cache_data(ttl=300,show_spinner=False)
@@ -1002,13 +1063,15 @@ if page.startswith("🎯"):
     st.caption("🔥 Aktuelle Form automatisch: Fußball mit API-Football-Bewertungen; NHL und DEL mit eigenem SportRadar-Formindex, soweit Einzelspieldaten vorhanden sind.")
 if page.startswith("⭐"):
     st.subheader("⭐ Meine Favoriten")
-    st.caption("Favoriten sind in dieser Version nur für die aktuelle Streamlit-Sitzung gespeichert. Echte Push-Mitteilungen bei Toren benötigen einen Hintergrunddienst und einen Push-Anbieter.")
-    favorites=st.session_state.setdefault("sr_favorites",{})
+    st.caption("Favoriten werden mit GitHub synchronisiert, sobald GH_FAVORITES_TOKEN als Streamlit Secret hinterlegt ist. Toralarm benötigt zusätzlich den GitHub-Actions-Workflow.")
+    if not secret("GH_FAVORITES_TOKEN"): st.warning("GH_FAVORITES_TOKEN fehlt: Favoriten sind nur während dieser Sitzung gespeichert und können keine Toralarme auslösen.")
+    favorites=current_favorites()
     if not favorites: st.info("Noch keine Spieler favorisiert. In den Spielerkarten auf ☆ Favorisieren tippen.")
     for key,entry in list(favorites.items()):
         st.markdown(f"**⭐ {entry.get('name')}** · {entry.get('team')} · {entry.get('league')}")
         if st.button("Entfernen",key=f"remove_{abs(hash(key))}"):
-            del favorites[key]; st.rerun()
+            new=dict(favorites); del new[key]
+            if update_favorites(new): st.rerun()
 elif page.startswith("🎟️"):
     combo_view(day,sport,league)
 elif sport.startswith("🏒"):
