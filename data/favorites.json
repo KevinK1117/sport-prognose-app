@@ -103,5 +103,12 @@
     "league": "NHL",
     "player_id": 8482079,
     "team_id": null
+  },
+  "NHL:8482702:Logan Stankoven": {
+    "name": "Logan Stankoven",
+    "team": "CAR",
+    "league": "NHL",
+    "player_id": 8482702,
+    "team_id": null
   }
 }
