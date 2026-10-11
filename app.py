@@ -195,6 +195,26 @@ def show_probability_legend(sport):
     )
 
 
+@st.cache_data(ttl=300,show_spinner=False)
+def del_form_snapshot():
+    path=Path(__file__).resolve().parent/'data'/'del_form_stats.json'
+    try:
+        obj=json.loads(path.read_text(encoding='utf-8'))
+        return obj.get('players',{}) if isinstance(obj,dict) else {}
+    except (OSError,ValueError): return {}
+
+
+def del_recent_form(player,day):
+    key=normalize_team(player.get('name',''))
+    info=del_form_snapshot().get(key,{})
+    recent=[g for g in info.get('games',[]) if g.get('date','')<day.isoformat()][:5]
+    if len(recent)<3: return None
+    return {'played':len(recent),'goals':sum(g['goals'] for g in recent),
+            'shots':sum(g['shots'] for g in recent),
+            'minutes':sum(g['minutes'] for g in recent),
+            'assists':sum(g.get('assists') or 0 for g in recent)}
+
+
 def player_form_details(player, sport, day):
     """Verified last-five-game form; return None if unsupported/unavailable."""
     if sport == "football":
@@ -205,6 +225,8 @@ def player_form_details(player, sport, day):
         return records.get(player["player_id"]) if isinstance(records, dict) else None
     if sport == "nhl":
         return nhl_recent_form(player.get("player_id"), day)
+    if sport == "del":
+        return del_recent_form(player,day)
     return None
 
 
@@ -258,7 +280,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
                 count=form_stats.get("rating_count",0)
                 rating=(form_stats.get("rating_sum",0)/count) if count else None
                 grade=grade_badge("API-Football Ø-Bewertung",rating,count,official=True)
-            elif sport=="nhl":
+            elif sport in ("nhl","del"):
                 grade=grade_badge("SportRadar-Formindex (eigene Berechnung)",nhl_own_form_grade(form_stats),n)
             else:
                 grade=grade_badge("Formbewertung",None,0)
@@ -660,14 +682,14 @@ def rank_candidates_by_verified_form(pool,day):
     evaluated=[]
     for team_key,players in teams.items():
         for player in sorted(players,key=lambda p:p.get("p") or 0,reverse=True)[:5]:
-            if player["league"]=="DEL":
-                continue  # No verified DEL player-by-game records available.
             if player["sport"]=="football":
                 team_id=player.get("team_id")
                 if not team_id or not player.get("player_id"): continue
                 if team_id not in football_forms:
                     football_forms[team_id]=football_recent_form(team_id,day,secret("API_SPORTS_KEY"))
                 stats=football_forms[team_id].get(player["player_id"])
+            elif player["league"]=="DEL":
+                stats=del_recent_form(player,day)
             else:
                 stats=nhl_recent_form(player.get("player_id"),day)
             if not stats: continue
@@ -686,15 +708,20 @@ def rank_candidates_by_verified_form(pool,day):
     return picks
 
 
+def multi_league_form_combo(day, mode="mixed"):
+    """Evaluate all scheduled fixtures for the chosen sport group."""
+    pool = []
+    if mode in ("football", "mixed"):
+        for competition in LEAGUES:
+            pool.extend(combo_candidates(day, "⚽ Fußball", competition))
+    if mode in ("hockey", "mixed"):
+        for competition in ("NHL", "DEL"):
+            pool.extend(combo_candidates(day, "🏒 Eishockey", competition))
+    return rank_candidates_by_verified_form(pool, day)
+
+
 def all_leagues_form_combo(day):
-    """Up to two green form-verified candidates per match from each team's season top five."""
-    pool=[]
-    for competition in LEAGUES:
-        pool.extend(combo_candidates(day,"⚽ Fußball",competition))
-    pool.extend(combo_candidates(day,"🏒 Eishockey","NHL"))
-    # DEL season aggregates do not include actual last-five game logs.
-    # Exclude DEL until a reliable game-by-game source is connected.
-    return rank_candidates_by_verified_form(pool,day)
+    return multi_league_form_combo(day, "mixed")
 
 
 def render_form_combo(picks):
@@ -746,34 +773,55 @@ def render_combo_picks(picks,requested):
 def combo_view(day,sport,league):
     st.subheader("🎟️ Kombi & Wettschein-Prüfung")
     st.caption("Modellbasierte Torschützen-Kandidaten. Keine sicheren Tipps oder bestätigten Buchmacherquoten.")
-    tab_daily,tab_all,tab_check=st.tabs(["📅 Grüne Tages-Kombi","🔥 Große Grün-Kombi","🔎 Wettschein prüfen"])
+    tab_daily,tab_all,tab_mixed,tab_check=st.tabs([
+        "📅 Grüne Tages-Kombi", "🔥 Große Grün-Kombi",
+        "⚽🏒 Mixed Tages-Kombi", "🔎 Wettschein prüfen"
+    ])
     with tab_daily:
-        amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=6)
-        st.caption(f"Auswahl: {league} · {day.strftime('%d.%m.%Y')} · Markt: Spieler erzielt mindestens ein Tor im Gesamtspiel")
-        st.caption("Nur grüne Kandidaten: höchste angepasste Torprognose je Spiel, unter Berücksichtigung der letzten fünf Einsätze und Spielzeit/Eiszeit. Bis zu zwei Tipps pro Begegnung.")
-        if league=="DEL":
-            st.info("Für DEL liegen noch keine überprüfbaren Einzelspiel-Daten der letzten fünf Spiele vor. Deshalb kann keine echte Form-Tages-Kombi erstellt werden.")
-        else:
-            if st.button("📅 Form-Tages-Kombi berechnen",key=f"daily_form_{day}_{sport}_{league}"):
-                st.session_state["daily_form_request"]=(str(day),sport,league)
-            if st.session_state.get("daily_form_request")== (str(day),sport,league):
-                with st.spinner("Top 5 je Team und tatsächliche letzte fünf Spiele auswerten …"):
-                    pool=combo_candidates(day,sport,league)
-                    ranked=rank_candidates_by_verified_form(pool,day)
-                picks=ranked[:amount]
-                if len(ranked)<amount:
-                    st.warning(f"Nur {len(ranked)} grüne Tipps mit überprüfbarer aktueller Form gefunden; keine Tipps werden ergänzt oder erfunden.")
-                render_form_combo(picks)
+        sport_mode=st.radio(
+            "Alle Ligen dieser Sportart durchsuchen",
+            ["⚽ Fußball – alle 7 Ligen", "🏒 Eishockey – NHL + DEL"],
+            index=0 if sport.startswith("⚽") else 1,
+            key="daily_all_leagues_sport",
+        )
+        mode="football" if sport_mode.startswith("⚽") else "hockey"
+        amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=7,key="daily_all_leagues_amount")
+        st.caption(f"{day.strftime('%d.%m.%Y')} · Alle Ligen der gewählten Sportart · Torschütze im Gesamtspiel")
+        st.caption("Nur grüne Kandidaten mit überprüfbarer Form aus bis zu fünf Einsätzen; maximal zwei Tipps pro Begegnung.")
+        request=(str(day),mode)
+        if st.button("📅 Form-Tages-Kombi berechnen",key=f"daily_all_{day}"):
+            st.session_state["daily_all_request"]=request
+        if st.session_state.get("daily_all_request")==request:
+            with st.spinner("Alle Ligen und aktuelle Spielerform auswerten …"):
+                ranked=multi_league_form_combo(day,mode)
+            if len(ranked)<amount:
+                st.warning(f"Nur {len(ranked)} geeignete grüne Tipps gefunden; keine Tipps werden erfunden.")
+            render_form_combo(ranked[:amount])
     with tab_all:
         st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Höchste grüne Torprognose aus den Top 5 jeder Mannschaft")
         st.caption("Bewertet werden echte letzte fünf Einsätze inklusive Tore, Schüsse und Spielzeit/Eiszeit. Nur grüne Tipps; maximal zwei je Begegnung.")
-        st.info("DEL: Die vorhandenen DEL-Daten enthalten nur Saisonwerte, keine überprüfbaren letzten fünf Einzelspiele. DEL wird hier deshalb vorerst nicht als aktuelle Form ausgegeben.")
+        st.caption("DEL wird berücksichtigt, sobald der tägliche DEL-Formdaten-Abruf erfolgreich war.")
         if st.button("🔥 Große Form-Kombi für diesen Tag berechnen",key=f"form_{day}"):
             st.session_state["form_day"]=str(day)
         if st.session_state.get("form_day")==str(day):
             with st.spinner("Echte Einzelspiel-Statistiken abrufen und Form bewerten … Dies kann mehrere Minuten dauern und API-Kontingent verbrauchen."):
                 picks=all_leagues_form_combo(day)
             render_form_combo(picks)
+    with tab_mixed:
+        st.markdown("**⚽🏒 Mixed Tages-Kombi: Fußball + Eishockey aus allen 9 Ligen**")
+        mixed_amount=st.select_slider(
+            "Anzahl Mixed-Tipps",options=[6,7,8,9,10],value=7,key="mixed_daily_amount"
+        )
+        st.caption(f"{day.strftime('%d.%m.%Y')} · 7 Fußballligen + NHL + DEL · Nur Spiele an diesem Tag")
+        st.caption("Nur grüne Torschützen mit überprüfbarer Form, maximal zwei je Begegnung. Fußball und Eishockey werden gemeinsam nach angepasster Torprognose sortiert.")
+        if st.button("⚽🏒 Mixed Tages-Kombi berechnen",key=f"mixed_day_{day}"):
+            st.session_state["mixed_form_day"]=str(day)
+        if st.session_state.get("mixed_form_day")==str(day):
+            with st.spinner("Alle 9 Ligen und die letzten fünf Einsätze prüfen …"):
+                ranked=multi_league_form_combo(day,"mixed")
+            if len(ranked)<mixed_amount:
+                st.warning(f"Nur {len(ranked)} geeignete grüne Tipps verfügbar; keine Tipps werden ergänzt.")
+            render_form_combo(ranked[:mixed_amount])
     with tab_check:
         st.write("Prüfe einen fremden oder eigenen Tipp anhand der SportRadar-Statistik. Anbieterquoten werden **nicht automatisch abgerufen**.")
         provider=st.selectbox("Buchmacher",["Tipico","bet365","Winamax","Pinnacle","Andere"])
@@ -822,7 +870,7 @@ else: st.caption("🕗 Noch kein täglicher Snapshot vorhanden")
 if st.button("🔄 Daten neu laden"):
     st.cache_data.clear(); st.rerun()
 if page.startswith("🎯"):
-    st.caption("🔥 Aktuelle Form wird automatisch angezeigt: Fußball mit API-Football-Bewertungen, NHL mit eigenem SportRadar-Formindex; DEL soweit Einzelspieldaten verfügbar sind. Datenabrufe können etwas dauern.")
+    st.caption("🔥 Aktuelle Form automatisch: Fußball mit API-Football-Bewertungen; NHL und DEL mit eigenem SportRadar-Formindex, soweit Einzelspieldaten vorhanden sind.")
 if page.startswith("🎟️"):
     combo_view(day,sport,league)
 elif sport.startswith("🏒"):
