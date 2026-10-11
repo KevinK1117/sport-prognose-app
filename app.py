@@ -388,7 +388,7 @@ def nhl_skaters(abbrev):
         goals=item.get("goals") or 0; first=item.get("firstName") or {}; last=item.get("lastName") or {}
         if isinstance(first,dict): first=first.get("default","")
         if isinstance(last,dict): last=last.get("default","")
-        result.append({"name":f"{first} {last}".strip() or "Unbekannt","player_id":item.get("playerId") or item.get("id"),"team":abbrev,"position":item.get("positionCode") or item.get("position") or "Unbekannt","goals":goals,"games":games,"shots":item.get("shots"),"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
+        result.append({"name":f"{first} {last}".strip() or "Unbekannt","player_id":item.get("playerId") or item.get("id"),"photo":(f"https://assets.nhle.com/mugs/nhl/{datetime.now(TZ).year if datetime.now(TZ).month>=7 else datetime.now(TZ).year-1}{datetime.now(TZ).year+1 if datetime.now(TZ).month>=7 else datetime.now(TZ).year}/{abbrev}/{item.get('playerId') or item.get('id')}.png" if (item.get("playerId") or item.get("id")) else None),"team":abbrev,"position":item.get("positionCode") or item.get("position") or "Unbekannt","goals":goals,"games":games,"shots":item.get("shots"),"minutes":None,"p":probability(goals,games,prior=0.18),"half":probability(goals,games,period=1/3,prior=0.18)})
     return result
 
 
@@ -682,7 +682,7 @@ def football_expected_lineup(team_id,day,key):
             player=item.get("player") or {}
             ident=player.get("id") or player.get("name")
             if not ident: continue
-            entry=appearances.setdefault(str(ident),{"name":player.get("name") or "?","pos":player.get("pos") or "?","starts":0})
+            entry=appearances.setdefault(str(ident),{"id":player.get("id"),"name":player.get("name") or "?","pos":player.get("pos") or "?","starts":0,"number":player.get("number")})
             entry["starts"]+=1
     if samples<2: return None
     positions={"G":0,"D":1,"M":2,"F":3}
@@ -693,12 +693,42 @@ def football_expected_lineup(team_id,day,key):
     chosen=(keepers[:1]+others[:10]) if keepers else ranked[:11]
     chosen.sort(key=lambda x:(positions.get(x["pos"],4),-x["starts"],x["name"]))
     formation=max(formations,key=formations.get) if formations else None
-    return {"players":chosen,"samples":samples,"formation":formation}
+    return {"players":chosen,"ranked":ranked,"samples":samples,"formation":formation}
 
 
 st.markdown('<style>\n/* Improved tactical rows: balanced spacing and readable labels on phones. */\n.sr-lineup-field{min-height:530px;gap:7px;padding:14px 7px;justify-content:space-around}\n.sr-lineup-section{width:100%;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}\n.sr-lineup-section-label{font-size:.66rem;font-weight:800;color:#17324b;background:#ffffffcf;padding:2px 9px;border-radius:999px}\n.sr-lineup-row{justify-content:center;gap:clamp(3px,2vw,15px)}\n.sr-lineup-person{flex:0 1 23%;max-width:23%;min-width:0}\n.sr-lineup-name{font-size:clamp(.63rem,2.2vw,.84rem);width:100%;box-sizing:border-box;min-height:27px;display:flex;align-items:center;justify-content:center;overflow-wrap:anywhere;hyphens:auto}\n.sr-lineup-avatar{flex:none}\n.sr-lineup-bench-list .sr-lineup-person{flex:0 1 95px;max-width:95px}\n.sr-lineup-rink .sr-lineup-person{flex-basis:29%;max-width:29%}\n@media(max-width:480px){.sr-lineup-field{min-height:510px;padding:13px 5px}.sr-lineup-row{gap:5px}.sr-lineup-person{flex-basis:24%;max-width:24%}.sr-lineup-name{font-size:.63rem;padding:4px 2px}.sr-lineup-rink .sr-lineup-person{flex-basis:31%;max-width:31%}}\n</style>',unsafe_allow_html=True)
 
-def lineup_board(team_name, players, sport="football", formation=None, confirmed=False, bench=None):
+@st.cache_data(ttl=3600,show_spinner=False)
+def football_squad_photos(team_id,key):
+    """Photos from API-Football squad profiles when available."""
+    rows=api("players/squads",{"team":team_id},key=key)
+    photos={}
+    for team in rows or []:
+        for player in team.get("players") or []:
+            if player.get("id") and safe_logo(player.get("photo")):
+                photos[str(player["id"])]=player["photo"]
+    return photos
+
+
+@st.cache_data(ttl=1800,show_spinner=False)
+def football_fixture_absences(fixture_id,key):
+    """Only fixture-specific reported absences; empty data is not proof of fitness."""
+    if not fixture_id or not key: return {}
+    rows=api("injuries",{"fixture":fixture_id},key=key)
+    if not isinstance(rows,list): return {}
+    result={}
+    for item in rows:
+        team=(item.get("team") or {}).get("id")
+        player=item.get("player") or {}
+        if team is None or not player.get("id"): continue
+        result.setdefault(str(team),{})[str(player["id"])]={
+            "name":player.get("name") or "Unbekannt",
+            "reason":str(player.get("reason") or item.get("type") or "Gemeldeter Ausfall"),
+            "type":str(player.get("type") or item.get("type") or "")}
+    return result
+
+
+def lineup_board(team_name, players, sport="football", formation=None, confirmed=False, bench=None, absences=None):
     """Responsive field with actual formation rows; no invented player photos or ratings."""
     def tile(p):
         full=str(p.get("name") or "?").strip()
@@ -708,8 +738,12 @@ def lineup_board(team_name, players, sport="football", formation=None, confirmed
         number=p.get("number")
         prefix=f"{html.escape(str(number))} " if number is not None else ""
         position=html.escape(str(p.get("pos") or ""))
+        photo=safe_logo(p.get("photo"))
+        avatar=(f'<img src="{html.escape(photo,quote=True)}" alt="" loading="lazy" '
+                'style="width:100%;height:100%;object-fit:cover;border-radius:50%" '
+                'onerror="this.style.display=\'none\';this.parentElement.textContent=\'👤\'">') if photo else '👤'
         return (f'<div class="sr-lineup-person" title="{html.escape(full,quote=True)}">'
-                f'<span class="sr-lineup-avatar">👤</span>'
+                f'<span class="sr-lineup-avatar">{avatar}</span>'
                 f'<span class="sr-lineup-name">{prefix}{html.escape(display)}</span>'
                 f'<span class="sr-lineup-pos">{position}</span></div>')
 
@@ -775,6 +809,10 @@ def lineup_board(team_name, players, sport="football", formation=None, confirmed
         markup+='<div class="sr-lineup-bench"><b>🪑 Ersatzbank</b><div class="sr-lineup-bench-list">'+''.join(tile(x) for x in bench)+'</div></div>'
     markup+='</div>'
     st.markdown(markup,unsafe_allow_html=True)
+    if absences:
+        st.markdown("**🚑 Gemeldete Ausfälle / fragliche Einsätze**")
+        for entry in absences:
+            st.caption(f"• {entry['name']}: {entry['reason']} ({entry['type'] or 'Status nicht näher angegeben'})")
 
 
 def hockey_lineup_panel(home_name,home_players,away_name,away_players,identifier):
@@ -784,23 +822,30 @@ def hockey_lineup_panel(home_name,home_players,away_name,away_players,identifier
         for tab,name,players in ((tab_home,home_name,home_players),(tab_away,away_name,away_players)):
             with tab:
                 skaters=sorted(players,key=lambda x:x.get("p") or 0,reverse=True)
-                arranged=[{"name":p.get("name"),"pos":p.get("position"),"number":p.get("number")} for p in skaters]
+                arranged=[{"name":p.get("name"),"pos":p.get("position"),"number":p.get("number"),
+                           "photo":p.get("photo")} for p in skaters]
                 lineup_board(name,arranged,"hockey")
 
 
 def display_football_lineup(fixture_id,home_name,away_name,key,home_id=None,away_id=None,day=None):
     with st.expander("👥 Voraussichtliche / bestätigte Aufstellung auf dem Spielfeld",expanded=False):
         rows=football_confirmed_lineup(fixture_id,key)
+        absences_by_team=football_fixture_absences(fixture_id,key)
         confirmed={str((r.get("team") or {}).get("id")):r for r in (rows or [])}
         tab_home,tab_away=st.tabs([f"🏠 {home_name}",f"✈️ {away_name}"])
         for tab,team_name,team_id in ((tab_home,home_name,home_id),(tab_away,away_name,away_id)):
             with tab:
                 team=confirmed.get(str(team_id))
+                reported=absences_by_team.get(str(team_id),{})
+                photos=football_squad_photos(team_id,key) if team_id else {}
                 if team and team.get("startXI"):
                     st.success("✅ Bestätigte Startelf vom Datenanbieter")
                     starters=[(x.get("player") or {}) for x in team.get("startXI") or []]
                     bench=[(x.get("player") or {}) for x in team.get("substitutes") or []]
-                    lineup_board(team_name,starters,formation=team.get("formation"),confirmed=True,bench=bench)
+                    for player in starters+bench:
+                        player["photo"]=photos.get(str(player.get("id")))
+                    lineup_board(team_name,starters,formation=team.get("formation"),confirmed=True,bench=bench,
+                                 absences=list(reported.values()))
                 else:
                     st.info("⏳ Noch keine bestätigte Startelf. Prognose aus früheren Startaufstellungen möglich.")
                     if not team_id or day is None:
@@ -814,8 +859,26 @@ def display_football_lineup(fixture_id,home_name,away_name,key,home_id=None,away
                         if not expected:
                             st.warning("Zu wenige frühere bestätigte Aufstellungen für eine belastbare Prognose.")
                         else:
-                            lineup_board(team_name,expected["players"],formation=expected["formation"])
-                            st.caption(f"Statistische Prognose aus {expected['samples']} früheren Aufstellungen. Keine bestätigte Elf; Verletzungen, Sperren und Rotation sind nicht berücksichtigt.")
+                            eligible=[]; missing=[]
+                            for player in expected["players"]:
+                                player["photo"]=photos.get(str(player.get("id")))
+                                if str(player.get("id")) in reported:
+                                    missing.append(reported[str(player["id"])])
+                                else:
+                                    eligible.append(player)
+                            # Replace reported absentees from historical starter frequency,
+                            # preserving their broad position when a substitute is available.
+                            used={str(x.get("id")) for x in eligible}
+                            for candidate in expected.get("ranked",[]):
+                                ident=str(candidate.get("id"))
+                                if len(eligible)>=11: break
+                                if ident in used or ident in reported: continue
+                                candidate={**candidate,"photo":photos.get(ident)}
+                                eligible.append(candidate); used.add(ident)
+                            eligible.sort(key=lambda x:({"G":0,"D":1,"M":2,"F":3}.get(x.get("pos"),4),-x.get("starts",0)))
+                            lineup_board(team_name,eligible,formation=expected["formation"],
+                                         absences=list(reported.values()))
+                            st.caption(f"Statistische Prognose aus {expected['samples']} früheren Aufstellungen. Gemeldete Ausfälle werden ausgeschlossen; Rotation wird anhand der Startelf-Häufigkeit berücksichtigt. Fehlende Meldungen bedeuten nicht, dass ein Spieler fit ist. Keine bestätigte Elf.")
 
 
 def combo_candidates(day, sport, league):
