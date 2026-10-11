@@ -544,33 +544,74 @@ def github_favorites_config():
     return token,repo
 
 
+def github_favorites_headers(token):
+    return {"Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28"}
+
+
+def favorites_error(response):
+    """Show actionable GitHub errors without ever exposing credentials."""
+    status=response.status_code
+    if status==401:
+        return "GitHub HTTP 401: Token ungültig oder abgelaufen. GH_FAVORITES_TOKEN in Streamlit Secrets erneuern."
+    if status==403:
+        return "GitHub HTTP 403: Schreibzugriff verweigert. Token-Berechtigung 'Contents: Read and write' prüfen."
+    if status==404:
+        return "GitHub HTTP 404: Repository oder Datei nicht erreichbar. GH_FAVORITES_REPO und Repository-Zugriff des Tokens prüfen."
+    if status==409:
+        return "GitHub HTTP 409: Gleichzeitige Änderung. Bitte erneut auf Favorisieren tippen."
+    if status==422:
+        return "GitHub HTTP 422: GitHub hat die Änderung abgelehnt. Token-Berechtigung und Branch-Schutz prüfen."
+    return f"GitHub HTTP {status}: Speichern nicht möglich. Repository und Token-Berechtigungen prüfen."
+
+
 def load_persistent_favorites():
     token,repo=github_favorites_config()
     if not token: return None
     try:
         response=requests.get(f"https://api.github.com/repos/{repo}/contents/data/favorites.json",
-            headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json"},timeout=15)
-        if response.status_code==404: return {},None
-        response.raise_for_status()
+            headers=github_favorites_headers(token),params={"ref":"main"},timeout=15)
+        if response.status_code==404:
+            # A missing file and a token without repository access both produce 404.
+            # Do not mistake an inaccessible repository for an empty favorites file.
+            repo_check=requests.get(f"https://api.github.com/repos/{repo}",
+                headers=github_favorites_headers(token),timeout=15)
+            if repo_check.ok: return {},None
+            st.session_state["sr_favorites_error"]=favorites_error(repo_check)
+            return None
+        if not response.ok:
+            st.session_state["sr_favorites_error"]=favorites_error(response)
+            return None
         data=response.json()
         content=json.loads(base64.b64decode(data["content"]).decode("utf-8"))
-        return (content if isinstance(content,dict) else {}),data.get("sha")
-    except (requests.RequestException,ValueError,KeyError,UnicodeDecodeError):
+        if not isinstance(content,dict):
+            st.session_state["sr_favorites_error"]="GitHub: data/favorites.json enthält kein gültiges JSON-Objekt."
+            return None
+        st.session_state.pop("sr_favorites_error",None)
+        return content,data.get("sha")
+    except (requests.RequestException,ValueError,KeyError,UnicodeDecodeError) as exc:
+        st.session_state["sr_favorites_error"]=f"GitHub konnte nicht gelesen werden ({type(exc).__name__})."
         return None
 
 
 def save_persistent_favorites(favorites,sha):
     token,repo=github_favorites_config()
     if not token: return False
-    body={"message":"Update SportRadar favorites","content":base64.b64encode(
+    body={"message":"Update SportRadar favorites","branch":"main","content":base64.b64encode(
         json.dumps(favorites,ensure_ascii=False,indent=2).encode("utf-8")).decode("ascii")}
     if sha: body["sha"]=sha
     try:
         response=requests.put(f"https://api.github.com/repos/{repo}/contents/data/favorites.json",
-            headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json"},json=body,timeout=20)
-        response.raise_for_status()
+            headers=github_favorites_headers(token),json=body,timeout=20)
+        if not response.ok:
+            st.session_state["sr_favorites_error"]=favorites_error(response)
+            return False
+        st.session_state.pop("sr_favorites_error",None)
         return True
-    except requests.RequestException: return False
+    except requests.RequestException as exc:
+        st.session_state["sr_favorites_error"]=f"GitHub-Verbindung fehlgeschlagen ({type(exc).__name__})."
+        return False
 
 
 def current_favorites():
@@ -583,10 +624,10 @@ def current_favorites():
 
 def update_favorites(favorites):
     if secret("GH_FAVORITES_TOKEN"):
-        # Reload SHA to avoid overwriting a stale revision.
         stored=load_persistent_favorites()
         if stored is None or not save_persistent_favorites(favorites,stored[1]):
-            st.error("Favorit konnte nicht dauerhaft auf GitHub gespeichert werden. Token und Berechtigungen prüfen.")
+            st.error(st.session_state.get("sr_favorites_error") or
+                     "Favorit konnte nicht dauerhaft auf GitHub gespeichert werden.")
             return False
     st.session_state["sr_favorites"]=favorites
     return True
