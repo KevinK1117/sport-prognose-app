@@ -64,6 +64,8 @@ DEL_TEAMS = {"team_1":"ERC Ingolstadt","team_2":"Adler Mannheim","team_3":"Eisb�
 DEL_ALIASES = {"team_1":["Ingolstadt"],"team_2":["Mannheim"],"team_3":["Berlin","Eisbaeren Berlin"],"team_5":["Krefeld"],"team_6":["Straubing"],"team_7":["Iserlohn"],"team_8":["Wolfsburg"],"team_9":["Bremerhaven","Fischtown Pinguins","Fischtown Pinguins Bremerhaven"],"team_11":["Köln","Koeln","Kolner Haie"],"team_12":["München","Muenchen","Red Bull München","EHC München"],"team_13":["Augsburg"],"team_14":["Nürnberg","Nuernberg","Nuremberg Ice Tigers"],"team_15":["Schwenningen"],"team_44":["Frankfurt","Loewen Frankfurt","Frankfurt Lowen","Frankfurt Loewen","Frankfurt Löwen"]}
 
 
+st.markdown("""<style>.sr-form{margin-top:12px;padding:11px 13px;border-radius:12px;background:rgba(18,120,120,.075);font-size:.89rem;line-height:1.7}.sr-form b{color:#147f7f}.sr-form small{color:#64748b}.sr-grade{display:inline-block;border-radius:10px;padding:5px 10px;margin-top:8px;font-weight:700}.sr-grade-high{background:#e5f5eb;color:#146b49}.sr-grade-mid{background:#fff1dc;color:#9a5b10}.sr-grade-low{background:#fce8e8;color:#a13a3a}.sr-grade-none{background:#edf1f5;color:#536274}</style>""",unsafe_allow_html=True)
+
 def secret(name):
     try:
         value=st.secrets.get(name,"")
@@ -193,14 +195,71 @@ def show_probability_legend(sport):
     )
 
 
-def show_player(player,period_label,sport="hockey"):
+def player_form_details(player, sport, day):
+    """Verified last-five-game form; return None if unsupported/unavailable."""
+    if sport == "football":
+        key = secret("API_SPORTS_KEY")
+        if not key or not player.get("team_id") or not player.get("player_id"):
+            return None
+        records = football_recent_form(player["team_id"], day, key)
+        return records.get(player["player_id"]) if isinstance(records, dict) else None
+    if sport == "nhl":
+        return nhl_recent_form(player.get("player_id"), day)
+    return None
+
+
+def grade_badge(label, value, sample, *, official=False):
+    if value is None:
+        return '<div class="sr-grade sr-grade-none">'+html.escape(label)+': nicht verfügbar</div>'
+    if official:
+        tier = "high" if value >= 7.5 else "mid" if value >= 6.5 else "low"
+    else:
+        tier = "high" if value >= 7.5 else "mid" if value >= 5.0 else "low"
+    return (f'<div class="sr-grade sr-grade-{tier}">{html.escape(label)}: '
+            f'{value:.1f}/10 · {sample} Einsätze</div>')
+
+
+def nhl_own_form_grade(stats):
+    """Own descriptive 0–10 index, NOT an NHL/Flashscore/Sofascore match rating."""
+    if not stats or stats.get("played",0)<3: return None
+    n=stats["played"]
+    avg_toi=stats.get("minutes",0)/n
+    if avg_toi <= 0: return None
+    goals=stats.get("goals",0)/n
+    shots=stats.get("shots",0)/n
+    # Bounded, heuristic display index, explicitly not a bookmaker probability.
+    return round(min(10.0,max(0.0, 2.0+goals*4.0+shots*.55+min(avg_toi,25)*.12)),1)
+
+
+def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
     tier=probability_tier(player.get("p"),sport)
     name=html.escape(str(player["name"])); team=html.escape(str(player["team"]))
     pills=[f'{player["goals"]} Tore',f'{player["games"]} Spiele']
     if player.get("shots") is not None: pills.append(f'{player["shots"]} Schüsse')
     if player.get("minutes") is not None: pills.append(f'{player["minutes"]:.0f} Min Ø')
     chips="".join('<span class="pill">'+html.escape(str(item))+"</span>" for item in pills)
-    st.markdown(f'''<div class="player sr-{tier}"><div class="player-head">{name}</div><div class="muted">{team}</div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div>{chips}</div></div>''',unsafe_allow_html=True)
+    if show_form:
+        if form_stats and form_stats.get("played",0)>=3:
+            n=form_stats["played"]
+            avg=form_stats.get("minutes",0)/n
+            time_label="Ø Eiszeit" if sport=="nhl" else "Ø Spielzeit"
+            detail=(f'Letzte {n} Einsätze · {form_stats.get("goals",0)} Tore · '
+                    f'{form_stats.get("shots",0)} Schüsse · {time_label} {avg:.1f} Min')
+            score=form_score(form_stats,"football" if sport=="football" else "nhl")
+            if sport=="football":
+                count=form_stats.get("rating_count",0)
+                rating=(form_stats.get("rating_sum",0)/count) if count else None
+                grade=grade_badge("API-Football Ø-Bewertung",rating,count,official=True)
+            elif sport=="nhl":
+                grade=grade_badge("SportRadar-Formindex (eigene Berechnung)",nhl_own_form_grade(form_stats),n)
+            else:
+                grade=grade_badge("Formbewertung",None,0)
+            form_html=f'<div class="sr-form"><b>🔥 Aktuelle Form</b><div>{html.escape(detail)}</div>{grade}<div><small>Formwert: {score:.2f} (kein Prozentwert) · Nur vorhandene Spiele zählen</small></div></div>' 
+        else:
+            form_html='<div class="sr-form"><b>🔥 Aktuelle Form</b><div>Letzte 5 Einsätze: verlässliche Einzelspieldaten nicht verfügbar</div></div>'
+    else:
+        form_html=''
+    st.markdown(f'''<div class="player sr-{tier}"><div class="player-head">{name}</div><div class="muted">{team}</div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div>{chips}</div>{form_html}</div>''',unsafe_allow_html=True)
 
 
 def show_players(players,period_label,sport="hockey"):
@@ -208,7 +267,9 @@ def show_players(players,period_label,sport="hockey"):
         st.info("Keine verlässlichen Spielerstatistiken verfügbar."); return
     tab1,tab2=st.tabs(["🎯 Spielerprognosen","📊 Tabelle"])
     with tab1:
-        for p in players: show_player(p,period_label,sport)
+        for p in players:
+            stats=player_form_details(p,sport,day) if st.session_state.get("show_recent_form",False) else None
+            show_player(p,period_label,sport,stats,st.session_state.get("show_recent_form",False))
     with tab2:
         table=[]
         for p in players:
@@ -320,7 +381,7 @@ def nhl_view(day):
             hp=nhl_skaters(home.get("abbrev")) if home.get("abbrev") else None
             ap=nhl_skaters(away.get("abbrev")) if away.get("abbrev") else None
             if hp is None or ap is None: st.warning("NHL-Spielerstatistiken nicht vollständig verfügbar."); continue
-            show_match_teams(home_name,home.get("logo"),hp,away_name,away.get("logo"),ap,"1. Drittel",f'nhl_{day}_{game.get("id",str(home.get("abbrev"))+str(away.get("abbrev")))}')
+            show_match_teams(home_name,home.get("logo"),hp,away_name,away.get("logo"),ap,"1. Drittel",f'nhl_{day}_{game.get("id",str(home.get("abbrev"))+str(away.get("abbrev")))}',sport="nhl")
 
 
 def safe_int(value):
@@ -494,8 +555,16 @@ def football_recent_form(team_id,day,key):
                 if mins is None or mins<=0: continue
                 goals=(stats.get("goals") or {}).get("total") or 0
                 shots=(stats.get("shots") or {}).get("total") or 0
-                rec=records.setdefault(ident,{"played":0,"goals":0,"shots":0,"minutes":0})
+                rec=records.setdefault(ident,{"played":0,"goals":0,"shots":0,"minutes":0,"rating_sum":0.0,"rating_count":0})
                 rec["played"]+=1; rec["goals"]+=goals; rec["shots"]+=shots; rec["minutes"]+=mins
+                rating=games.get("rating")
+                try:
+                    numeric=float(rating)
+                    if 0 <= numeric <= 10:
+                        rec["rating_sum"]+=numeric
+                        rec["rating_count"]+=1
+                except (ValueError,TypeError):
+                    pass
     return records
 
 
@@ -732,6 +801,10 @@ if snapshot.get("updated_at"):
 else: st.caption("🕗 Noch kein täglicher Snapshot vorhanden")
 if st.button("🔄 Daten neu laden"):
     st.cache_data.clear(); st.rerun()
+if page.startswith("🎯"):
+    st.checkbox("🔥 Aktuelle Form der letzten 5 Einsätze in Spielerkarten anzeigen (zusätzliche Datenabrufe)",key="show_recent_form",value=False)
+    if st.session_state.get("show_recent_form"):
+        st.caption("Fußball: Ø API-Football-Spielbewertung (nur tatsächlich vorhandene Ratings). NHL: eigener SportRadar-Formindex aus Toren, Schüssen und Eiszeit – keine offizielle Spielerbewertung. DEL: keine verlässlichen Einzelspiel-Ratings verfügbar. Zusätzliche API-Abrufe können länger dauern.")
 if page.startswith("🎟️"):
     combo_view(day,sport,league)
 elif sport.startswith("🏒"):
