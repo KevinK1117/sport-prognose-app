@@ -64,7 +64,7 @@ DEL_TEAMS = {"team_1":"ERC Ingolstadt","team_2":"Adler Mannheim","team_3":"Eisb�
 DEL_ALIASES = {"team_1":["Ingolstadt"],"team_2":["Mannheim"],"team_3":["Berlin","Eisbaeren Berlin"],"team_5":["Krefeld"],"team_6":["Straubing"],"team_7":["Iserlohn"],"team_8":["Wolfsburg"],"team_9":["Bremerhaven","Fischtown Pinguins","Fischtown Pinguins Bremerhaven"],"team_11":["Köln","Koeln","Kolner Haie"],"team_12":["München","Muenchen","Red Bull München","EHC München"],"team_13":["Augsburg"],"team_14":["Nürnberg","Nuernberg","Nuremberg Ice Tigers"],"team_15":["Schwenningen"],"team_44":["Frankfurt","Loewen Frankfurt","Frankfurt Lowen","Frankfurt Loewen","Frankfurt Löwen"]}
 
 
-st.markdown("""<style>.sr-form{margin-top:12px;padding:11px 13px;border-radius:12px;background:rgba(18,120,120,.075);font-size:.89rem;line-height:1.7}.sr-form b{color:#147f7f}.sr-form small{color:#64748b}.sr-grade{display:inline-block;border-radius:10px;padding:5px 10px;margin-top:8px;font-weight:700}.sr-grade-high{background:#e5f5eb;color:#146b49}.sr-grade-mid{background:#fff1dc;color:#9a5b10}.sr-grade-low{background:#fce8e8;color:#a13a3a}.sr-grade-none{background:#edf1f5;color:#536274}</style>""",unsafe_allow_html=True)
+st.markdown("""<style>.sr-form{margin-top:12px;padding:11px 13px;border-radius:12px;background:rgba(18,120,120,.075);font-size:.89rem;line-height:1.7}.sr-form b{color:#147f7f}.sr-form small{color:#64748b}.sr-grade{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-radius:14px;padding:13px 15px;margin-top:10px;font-weight:700;border:1px solid rgba(0,0,0,.035)}.sr-grade-label{font-size:.78rem;line-height:1.35;max-width:60%}.sr-grade-score{font-size:clamp(1.8rem,6vw,2.35rem);font-weight:850;line-height:1;letter-spacing:-.035em;font-variant-numeric:tabular-nums}.sr-grade-denom{font-size:.85rem;font-weight:600;opacity:.7}.sr-grade-meta{font-size:.77rem;opacity:.85;font-weight:600;width:100%}.sr-grade-high{background:#e5f5eb;color:#146b49}.sr-grade-mid{background:#fff1dc;color:#9a5b10}.sr-grade-low{background:#fce8e8;color:#a13a3a}.sr-grade-none{background:#edf1f5;color:#536274}</style>""",unsafe_allow_html=True)
 
 def secret(name):
     try:
@@ -209,14 +209,22 @@ def player_form_details(player, sport, day):
 
 
 def grade_badge(label, value, sample, *, official=False):
+    """Prominent, accessible form rating; separate from goal probabilities."""
+    safe_label = html.escape(str(label))
     if value is None:
-        return '<div class="sr-grade sr-grade-none">'+html.escape(label)+': nicht verfügbar</div>'
+        return f'<div class="sr-grade sr-grade-none"><span class="sr-grade-label">{safe_label}</span><span>Keine Bewertung verfügbar</span></div>'
     if official:
         tier = "high" if value >= 7.5 else "mid" if value >= 6.5 else "low"
+        status = "Starke Form" if tier == "high" else "Solide Form" if tier == "mid" else "Schwächere Form"
     else:
-        tier = "high" if value >= 7.5 else "mid" if value >= 5.0 else "low"
-    return (f'<div class="sr-grade sr-grade-{tier}">{html.escape(label)}: '
-            f'{value:.1f}/10 · {sample} Einsätze</div>')
+        tier = "high" if value >= 8.5 else "mid" if value >= 7.0 else "low"
+        status = "Topform" if tier == "high" else "Gute Form" if tier == "mid" else "Schwächere Form"
+    score = f"{value:.1f}".replace(".", ",")
+    return (f'<div class="sr-grade sr-grade-{tier}">'
+            f'<span class="sr-grade-label">🔥 {safe_label}</span>'
+            f'<span class="sr-grade-score">{score}<span class="sr-grade-denom"> / 10</span></span>'
+            f'<span class="sr-grade-meta">{status} · {sample} bewertete Einsätze</span>'
+            '</div>')
 
 
 def nhl_own_form_grade(stats):
