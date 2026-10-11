@@ -1535,8 +1535,48 @@ def live_view(day):
                     found+=1
     if not found: st.info('Keine passenden Spiele für den ausgewählten Filter.')
 
-st.title("⚡ SportRadar 👑")
-st.caption("Deine Sport-Prognose App · Live-Ergebnisse, Aufstellungen & Torschützen")
+st.markdown("""<style>
+/* Screenshot-inspired SportRadar stadium / neon interface */
+[data-testid="stAppViewContainer"]{background:radial-gradient(ellipse 90% 230px at 50% 0%,#0870b8 0%,#073467 35%,#04162f 80%,#03122b 100%)!important;color:#f8fbff!important}
+[data-testid="stHeader"]{background:#03132a88!important}
+.block-container{max-width:1000px!important;padding-top:.6rem!important}
+.sr-stadium-header{padding:24px 14px 20px;margin:-8px -6px 15px;border-radius:0 0 22px 22px;background:radial-gradient(ellipse at 52% 0%,#19b9ff88 0%,#0073c822 25%,transparent 70%),repeating-radial-gradient(ellipse at 50% -170px,transparent 0px,transparent 55px,#44cfff13 57px,#44cfff15 59px);border-bottom:1px solid #1682db66;box-shadow:0 10px 32px #00132866}
+.sr-brand{font-size:clamp(2.1rem,7vw,3.1rem);font-weight:900;letter-spacing:-.04em;color:#fff;line-height:1.08;text-shadow:0 0 20px #0b92ff88}
+.sr-subtitle{color:#9ad8ff;font-size:1rem;margin-top:4px}
+.sr-header-icons{float:right;font-size:1.35rem;color:#d5edff;letter-spacing:.45rem;margin-top:8px}
+.sr-hero{position:relative;background:linear-gradient(112deg,#bb003f 0%,#e90955 40%,#920e81 69%,#0757b5 100%)!important;border:2px solid #ff4885!important;border-right-color:#1cc8ff!important;border-radius:24px!important;box-shadow:0 0 18px #ff007a88,0 0 32px #057aff44!important;padding:25px 20px!important;margin:15px 0 22px!important}
+.sr-hero strong{font-size:clamp(1.65rem,6vw,2.25rem)!important;letter-spacing:.015em}.sr-hero small{font-size:clamp(.84rem,3.3vw,1.05rem)!important;color:#fff!important;line-height:1.5}
+[data-testid="stMultiSelect"] [data-baseweb="select"]>div{background:#e9f4ff!important;border:2px solid #1cbaff!important;border-radius:18px!important;padding:7px!important;box-shadow:0 0 16px #08b5ff55!important}
+[data-testid="stMultiSelect"] [data-baseweb="tag"]{background:linear-gradient(120deg,#086ad0,#003c96)!important;border:1px solid #37bbff!important;border-radius:11px!important;min-height:35px!important;box-shadow:0 0 8px #057eff55}
+[data-testid="stMultiSelect"] [data-baseweb="tag"] *{color:#fff!important;font-weight:700!important}
+[data-testid="stMultiSelect"] label,[data-testid="stSegmentedControl"] label{font-size:1.02rem!important;color:#fff!important}
+[data-testid="stSegmentedControl"]{border:1px solid #24b7ff;border-radius:14px;overflow:hidden;box-shadow:0 0 13px #008aff66}
+[data-testid="stSegmentedControl"] button{background:#e8f5ff!important;color:#083365!important;font-weight:800!important;min-height:45px}
+[data-testid="stSegmentedControl"] button[aria-checked="true"], [data-testid="stSegmentedControl"] button[aria-pressed="true"]{background:#092354!important;color:#fff!important;box-shadow:inset 0 -4px #ff1d72!important}
+.stButton>button{border-radius:14px!important;background:linear-gradient(115deg,#006be6,#004aab)!important;border:2px solid #21c8ff!important;color:#fff!important;font-weight:800!important;box-shadow:0 0 13px #007bff66!important;min-height:43px}
+.stButton>button[kind="primary"]{background:linear-gradient(110deg,#fa0878,#ff5261)!important;border:1px solid #ff5c9a!important;box-shadow:0 0 18px #ff157b66!important}
+[data-testid="stExpander"]{border:1px solid #1174dc!important;background:#061f46!important;border-radius:20px!important;box-shadow:0 0 12px #006cff33!important}
+[data-testid="stExpander"] summary{background:linear-gradient(95deg,#092b61,#083c80)!important;border-bottom:1px solid #125ba7!important;min-height:54px!important}
+[data-testid="stExpander"] summary p{color:#fff!important;font-weight:800!important}
+.sr-live-card,.sr-game{background:#092b5b!important;border:1px solid #168eff!important;border-radius:15px!important;color:#fff!important;box-shadow:0 0 9px #0077ff44!important}
+.sr-game-result,.sr-live-score{background:#04162f!important;color:#fff!important;border:1px solid #2376b8!important}
+.sr-live-team,.sr-live-state,.sr-live-scorer,.sr-game-team{color:#f5faff!important}
+.sr-live-scorer,.sr-ticker-item{background:#0c3a71!important;color:#f3faff!important}
+[data-testid="stRadio"] [role="radiogroup"]{gap:.45rem!important}
+[data-testid="stRadio"] label:has(input:checked){background:linear-gradient(115deg,#e40065,#a4007a)!important;border-color:#ff4999!important;box-shadow:0 0 13px #ff147a66!important}
+[data-testid="stRadio"] [role="radiogroup"] label{border:1px solid #247ad4;border-radius:13px;padding:7px 11px;background:#082b5b;color:#fff!important}
+[data-testid="stRadio"] [role="radiogroup"] label p{color:#fff!important;font-weight:750!important}
+[data-testid="stSelectbox"] [data-baseweb="select"]>div{background:#e9f4ff!important;border:1px solid #1aa8ff!important;color:#062c58!important}
+[data-testid="stSelectbox"] [data-baseweb="select"] *{color:#062c58!important}
+[data-testid="stCaptionContainer"]{color:#a8d9ff!important}
+.player{background:linear-gradient(140deg,#0b336a,#08234b)!important;border:1px solid #1884d8!important;border-left:5px solid #10c59d!important}
+.player .prob{background:#104e74!important;border:1px solid #2187af!important}.player .prob strong{color:#69fbd1!important}
+.sr-combo-profile{background:#092b57!important;border-color:#1488d3!important}
+@media(max-width:480px){.sr-header-icons{font-size:1rem;letter-spacing:.15rem}.sr-stadium-header{padding:17px 8px}.sr-hero{padding:21px 16px!important}.block-container{padding-left:.6rem!important;padding-right:.6rem!important}}
+</style>""",unsafe_allow_html=True)
+st.markdown('<div class="sr-stadium-header"><div class="sr-header-icons">⌕ ♧ ◉</div><div class="sr-brand">SportRadar 👑</div><div class="sr-subtitle">Deine Sport-Prognose App</div></div>',unsafe_allow_html=True)
+
+
 st.caption("🇩🇪 Deutsche Zeit · Saison automatisch · Statistische Torprognosen")
 page=st.radio("Bereich",["🔴 Live-Ergebnisse","🎯 Torprognosen","🎟️ Kombi & Prüfung","⭐ Favoriten"],horizontal=True)
 sport=st.radio("Sportart",["🏒 Eishockey","⚽ Fußball"],horizontal=True)
