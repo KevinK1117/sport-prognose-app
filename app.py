@@ -268,8 +268,8 @@ def show_players(players,period_label,sport="hockey"):
     tab1,tab2=st.tabs(["🎯 Spielerprognosen","📊 Tabelle"])
     with tab1:
         for p in players:
-            stats=player_form_details(p,sport,day) if st.session_state.get("show_recent_form",False) else None
-            show_player(p,period_label,sport,stats,st.session_state.get("show_recent_form",False))
+            stats=player_form_details(p,sport,day)
+            show_player(p,period_label,sport,stats,True)
     with tab2:
         table=[]
         for p in players:
@@ -459,14 +459,14 @@ def del_view(day):
             hp=[p for p in players if p["team_id"]==home_id]
             ap=[p for p in players if p["team_id"]==away_id]
             st.caption(f"{len(hp)+len(ap)} Spieler mit absolvierten Saisonspielen für diese Begegnung")
-            show_match_teams(DEL_TEAMS.get(home_id,home_name),home.get("logo"),hp,DEL_TEAMS.get(away_id,away_name),away.get("logo"),ap,"1. Drittel",f'del_{day}_{match.get("id",home_id+"_"+away_id)}')
+            show_match_teams(DEL_TEAMS.get(home_id,home_name),home.get("logo"),hp,DEL_TEAMS.get(away_id,away_name),away.get("logo"),ap,"1. Drittel",f'del_{day}_{match.get("id",home_id+"_"+away_id)}',sport="del")
     st.divider()
     with st.expander("📊 Alle DEL-Spieler und Mannschaften"):
         choices={"Alle Spieler":None}
         for team_id in sorted({p["team_id"] for p in players}): choices[f"{DEL_TEAMS.get(team_id,team_id)} ({team_id})"]=team_id
         selected=st.selectbox("Mannschaft",list(choices)); chosen=choices[selected]
         filtered=players if chosen is None else [p for p in players if p["team_id"]==chosen]
-        show_players(filtered[:30],"1. Drittel")
+        show_players(filtered[:30],"1. Drittel",sport="del")
     with st.expander("🔎 DEL-Teamzuordnung prüfen"):
         st.dataframe(pd.DataFrame([{"Kennung":tid,"Mannschaft":name,"Spieler mit Saisonspielen":sum(p["team_id"]==tid for p in players)} for tid,name in DEL_TEAMS.items()]),hide_index=True,use_container_width=True)
 
@@ -700,6 +700,18 @@ def render_form_combo(picks):
         unit="Eiszeit" if p["sport"]=="hockey" else "Spielzeit"
         st.markdown(f'**{index}. 🟢 {html.escape(p["name"])}** · {html.escape(p["team"])} · {p["league"]}')
         st.caption(f'{p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse, Ø {avg_minutes:.1f} Min. {unit}')
+        if p["sport"]=="football":
+            rating_count=form.get("rating_count",0)
+            rating=form.get("rating_sum",0)/rating_count if rating_count else None
+            label="API-Football Ø-Bewertung"
+            official=True
+        else:
+            rating=nhl_own_form_grade(form)
+            rating_count=form["played"]
+            label="SportRadar-Formindex (eigene Berechnung)"
+            official=False
+        st.markdown(grade_badge(label,rating,rating_count,official=official),unsafe_allow_html=True)
+        st.caption(f'🔥 Formwert: {form_score(form,p["sport"]):.2f} · Letzte {form["played"]} Einsätze')
     st.metric("Ausgewählte Tipps",len(picks))
     if len(picks)>1:
         chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
@@ -802,9 +814,7 @@ else: st.caption("🕗 Noch kein täglicher Snapshot vorhanden")
 if st.button("🔄 Daten neu laden"):
     st.cache_data.clear(); st.rerun()
 if page.startswith("🎯"):
-    st.checkbox("🔥 Aktuelle Form der letzten 5 Einsätze in Spielerkarten anzeigen (zusätzliche Datenabrufe)",key="show_recent_form",value=False)
-    if st.session_state.get("show_recent_form"):
-        st.caption("Fußball: Ø API-Football-Spielbewertung (nur tatsächlich vorhandene Ratings). NHL: eigener SportRadar-Formindex aus Toren, Schüssen und Eiszeit – keine offizielle Spielerbewertung. DEL: keine verlässlichen Einzelspiel-Ratings verfügbar. Zusätzliche API-Abrufe können länger dauern.")
+    st.caption("🔥 Aktuelle Form wird automatisch angezeigt: Fußball mit API-Football-Bewertungen, NHL mit eigenem SportRadar-Formindex; DEL soweit Einzelspieldaten verfügbar sind. Datenabrufe können etwas dauern.")
 if page.startswith("🎟️"):
     combo_view(day,sport,league)
 elif sport.startswith("🏒"):
