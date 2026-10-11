@@ -23,24 +23,8 @@ jobs:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           
-      - name: Test ntfy push
-        env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        run: |
-          python - <<'PY'
-          import os
-          import requests
-
-          topic = os.environ["NTFY_TOPIC"]
-          response = requests.post(
-              f"https://ntfy.sh/{topic}",
-              data="SportRadar Toralarm funktioniert!".encode("utf-8"),
-              headers={"Title": "SportRadar Test", "Tags": "tada"},
-              timeout=15,
-          )
-          response.raise_for_status()
-          print("Testnachricht erfolgreich an ntfy übermittelt.")
-          PY
+  
+              
 
       - name: Persist processed goals
         run: |
