@@ -696,38 +696,81 @@ def football_expected_lineup(team_id,day,key):
     return {"players":chosen,"samples":samples,"formation":formation}
 
 
+st.markdown('<style>\n/* Improved tactical rows: balanced spacing and readable labels on phones. */\n.sr-lineup-field{min-height:530px;gap:7px;padding:14px 7px;justify-content:space-around}\n.sr-lineup-section{width:100%;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}\n.sr-lineup-section-label{font-size:.66rem;font-weight:800;color:#17324b;background:#ffffffcf;padding:2px 9px;border-radius:999px}\n.sr-lineup-row{justify-content:center;gap:clamp(3px,2vw,15px)}\n.sr-lineup-person{flex:0 1 23%;max-width:23%;min-width:0}\n.sr-lineup-name{font-size:clamp(.63rem,2.2vw,.84rem);width:100%;box-sizing:border-box;min-height:27px;display:flex;align-items:center;justify-content:center;overflow-wrap:anywhere;hyphens:auto}\n.sr-lineup-avatar{flex:none}\n.sr-lineup-bench-list .sr-lineup-person{flex:0 1 95px;max-width:95px}\n.sr-lineup-rink .sr-lineup-person{flex-basis:29%;max-width:29%}\n@media(max-width:480px){.sr-lineup-field{min-height:510px;padding:13px 5px}.sr-lineup-row{gap:5px}.sr-lineup-person{flex-basis:24%;max-width:24%}.sr-lineup-name{font-size:.63rem;padding:4px 2px}.sr-lineup-rink .sr-lineup-person{flex-basis:31%;max-width:31%}}\n</style>',unsafe_allow_html=True)
+
 def lineup_board(team_name, players, sport="football", formation=None, confirmed=False, bench=None):
-    """Mobile-friendly pitch/rink with actual names; no fabricated portraits or ratings."""
+    """Responsive field with actual formation rows; no invented player photos or ratings."""
     def tile(p):
-        name=html.escape(str(p.get("name") or "?"))
+        full=str(p.get("name") or "?").strip()
+        bits=full.split()
+        # Shorten only long labels; retain the full name as an accessible tooltip.
+        display=full if len(full)<=15 else ((bits[0][0]+". "+" ".join(bits[1:])) if len(bits)>1 else full)
         number=p.get("number")
-        number=f"{html.escape(str(number))} " if number is not None else ""
+        prefix=f"{html.escape(str(number))} " if number is not None else ""
         position=html.escape(str(p.get("pos") or ""))
-        return f'<div class="sr-lineup-person"><span class="sr-lineup-avatar">👤</span><span class="sr-lineup-name">{number}{name}</span><span class="sr-lineup-pos">{position}</span></div>'
+        return (f'<div class="sr-lineup-person" title="{html.escape(full,quote=True)}">'
+                f'<span class="sr-lineup-avatar">👤</span>'
+                f'<span class="sr-lineup-name">{prefix}{html.escape(display)}</span>'
+                f'<span class="sr-lineup-pos">{position}</span></div>')
+
+    groups={"G":[],"D":[],"M":[],"F":[]}
+    for player in players:
+        pos=str(player.get("pos") or "M").upper()[:1]
+        groups[pos if pos in groups else "M"].append(player)
+    sections=[]
     if sport=="football":
-        groups={"G":[],"D":[],"M":[],"F":[]}
-        for p in players:
-            pos=str(p.get("pos") or "M").upper()[:1]
-            groups[pos if pos in groups else "M"].append(p)
-        rows=[groups[k] for k in ("F","M","D","G") if groups[k]]
+        # Formation describes outfield lines from forwards to defence (e.g. 4-2-3-1).
+        try:
+            counts=[int(v) for v in str(formation).split("-")]
+            valid=sum(counts)==10 and len(counts) in (3,4,5) and all(1<=v<=5 for v in counts)
+        except (ValueError,TypeError): valid=False
+        if valid:
+            # Assign position groups to the tactical lines; preserve forward/midfield/defender priority.
+            defenders=groups["D"][:]
+            forwards=groups["F"][:]
+            midfield=groups["M"][:]
+            ordered=(defenders+midfield+forwards)
+            if len(ordered)<10: ordered += [x for x in players if x not in ordered and str(x.get("pos") or "").upper()[:1]!="G"]
+            # Fill defensive and offensive lines from their natural groups, then the rest.
+            remaining=ordered[:]
+            lineups=[]
+            for i,n in enumerate(counts):
+                preferred=defenders if i==0 else forwards if i==len(counts)-1 else midfield
+                row=[]
+                for candidate in preferred:
+                    if candidate in remaining and len(row)<n:
+                        row.append(candidate); remaining.remove(candidate)
+                while len(row)<n and remaining: row.append(remaining.pop(0))
+                lineups.append(row)
+            sections=[("",row) for row in reversed(lineups) if row]
+        else:
+            # Avoid six across a phone screen even when the formation is unknown.
+            for key in ("F","M","D"):
+                group=groups[key]
+                chunks=[group[i:i+4] for i in range(0,len(group),4)]
+                sections.extend(("",chunk) for chunk in chunks)
+        if groups["G"]: sections.append(("",groups["G"][:1]))
         field="pitch"
     else:
-        # No verified line assignments: display heuristic groupings, not official lines.
-        forwards=[p for p in players if str(p.get("pos") or "").upper() not in ("D","G")]
-        defenders=[p for p in players if str(p.get("pos") or "").upper()=="D"]
-        goalies=[p for p in players if str(p.get("pos") or "").upper()=="G"]
-        rows=[forwards[i:i+3] for i in range(0,min(len(forwards),9),3)]
-        rows += [defenders[i:i+2] for i in range(0,min(len(defenders),6),2)]
-        if goalies: rows.append(goalies[:1])
+        forwards=groups["F"]+groups["M"]
+        defenders=groups["D"]
+        for i in range(0,min(len(forwards),12),3):
+            sections.append((f"Sturm · Reihe {i//3+1}",forwards[i:i+3]))
+        for i in range(0,min(len(defenders),6),2):
+            sections.append((f"Verteidigung · Paar {i//2+1}",defenders[i:i+2]))
+        if groups["G"]: sections.append(("Torhüter",groups["G"][:1]))
         field="rink"
-    if not rows:
+    if not sections:
         st.info("Keine Spieler für eine Aufstellung verfügbar."); return
     status="Bestätigte Aufstellung" if confirmed else "Voraussichtliche / statistische Darstellung"
-    detail=f" · Formation {html.escape(str(formation))}" if formation else ""
+    detail=f" · {html.escape(str(formation))}" if formation else ""
     markup=(f'<div class="sr-lineup-wrap"><div class="sr-lineup-title">{html.escape(team_name)} · {status}{detail}</div>'
-            f'<div class="sr-lineup-field sr-lineup-{field}">'
-            +''.join('<div class="sr-lineup-row">'+''.join(tile(x) for x in row)+'</div>' for row in rows)
-            +'</div>')
+            f'<div class="sr-lineup-field sr-lineup-{field}">')
+    for label,row in sections:
+        markup+=(f'<div class="sr-lineup-section">'
+                 +(f'<div class="sr-lineup-section-label">{html.escape(label)}</div>' if label else '')
+                 +'<div class="sr-lineup-row">'+''.join(tile(x) for x in row)+'</div></div>')
+    markup+='</div>'
     if bench:
         markup+='<div class="sr-lineup-bench"><b>🪑 Ersatzbank</b><div class="sr-lineup-bench-list">'+''.join(tile(x) for x in bench)+'</div></div>'
     markup+='</div>'
