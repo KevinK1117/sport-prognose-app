@@ -499,6 +499,21 @@ def football_recent_form(team_id,day,key):
     return records
 
 
+def parse_toi(value):
+    """Convert NHL game-log TOI (MM:SS) into decimal minutes."""
+    if isinstance(value,(int,float)):
+        return float(value) if 0 <= value <= 65 else 0.0
+    if isinstance(value,str):
+        parts=value.split(":")
+        try:
+            if len(parts)==2:
+                minutes=int(parts[0])+int(parts[1])/60
+                return minutes if 0 <= minutes <= 65 else 0.0
+        except ValueError:
+            pass
+    return 0.0
+
+
 @st.cache_data(ttl=7200,show_spinner=False)
 def nhl_recent_form(player_id,day):
     """NHL official game log; exclude games on/after the prediction day."""
@@ -515,7 +530,7 @@ def nhl_recent_form(player_id,day):
         if played<day: recent.append(game)
     recent=sorted(recent,key=lambda row:row.get("gameDate", ""),reverse=True)[:5]
     if len(recent)<3: return None
-    return {"played":len(recent),"goals":sum(int(g.get("goals") or 0) for g in recent),"shots":sum(int(g.get("shots") or 0) for g in recent),"minutes":None}
+    return {"played":len(recent),"goals":sum(int(g.get("goals") or 0) for g in recent),"shots":sum(int(g.get("shots") or 0) for g in recent),"minutes":sum(parse_toi(g.get("toi") or g.get("timeOnIce")) for g in recent)}
 
 
 def form_score(stats,sport):
@@ -531,8 +546,35 @@ def form_score(stats,sport):
     return round(goals*5 + shots*.15,3)
 
 
+def adjusted_goal_probability(player, stats):
+    """Conservative form/minutes adjustment of the existing season model.
+
+    This is a heuristic ranking estimate, NOT a calibrated betting probability.
+    """
+    base=player.get("p")
+    if base is None or not stats or stats.get("played",0)<3:
+        return None
+    n=stats["played"]
+    season_rate=player.get("goals",0)/max(1,player.get("games",1))
+    recent_rate=stats.get("goals",0)/n
+    # Shrink noisy five-game goal trends toward the season rate.
+    goal_factor=max(.75,min(1.25,(recent_rate+.25)/(season_rate+.25)))
+    minutes=stats.get("minutes") or 0
+    if player["sport"]=="football":
+        avg=minutes/n if minutes else 0
+        if avg<30: return None
+        baseline=player.get("minutes") or 75
+        time_factor=max(.75,min(1.2,avg/max(30,baseline)))
+    else:
+        avg=minutes/n if minutes else 0
+        # Hockey ice time is required; missing TOI must not look like verified form.
+        if avg<6: return None
+        time_factor=max(.75,min(1.2,avg/16.0))
+    return min(99.0,round(base*goal_factor*time_factor,2))
+
+
 def rank_candidates_by_verified_form(pool,day):
-    """Evaluate each team's top five season candidates using real recent game logs."""
+    """Choose up to two highest adjusted green scorers per fixture from each team's top five."""
     teams={}
     for player in pool:
         team_key=(player["league"],player["fixture"],str(player.get("team_id") or player["team"]))
@@ -552,20 +594,23 @@ def rank_candidates_by_verified_form(pool,day):
             else:
                 stats=nhl_recent_form(player.get("player_id"),day)
             if not stats: continue
+            adjusted=adjusted_goal_probability(player,stats)
+            if adjusted is None or probability_tier(adjusted,player["sport"])!="high":
+                continue
             score=form_score(stats,player["sport"])
-            if score is not None:
-                evaluated.append({**player,"form":stats,"form_score":score})
-    evaluated.sort(key=lambda p:(p["form_score"],p.get("p") or 0),reverse=True)
-    picks=[]; used=set()
+            evaluated.append({**player,"form":stats,"form_score":score,"adjusted_p":adjusted})
+    evaluated.sort(key=lambda p:(p["adjusted_p"],p["form_score"]),reverse=True)
+    picks=[]; per_match={}
     for player in evaluated:
         key=(player["league"],player["fixture"])
-        if key in used: continue
-        picks.append(player); used.add(key)
+        if per_match.get(key,0)>=2: continue
+        picks.append(player)
+        per_match[key]=per_match.get(key,0)+1
     return picks
 
 
 def all_leagues_form_combo(day):
-    """One top-5 season candidate per team, ranked by verified last-five form."""
+    """Up to two green form-verified candidates per match from each team's season top five."""
     pool=[]
     for competition in LEAGUES:
         pool.extend(combo_candidates(day,"⚽ Fußball",competition))
@@ -577,18 +622,21 @@ def all_leagues_form_combo(day):
 
 def render_form_combo(picks):
     if not picks:
-        st.info("Keine Kandidaten mit verifizierten Einzelspiel-Daten aus mindestens drei der letzten fünf Spiele gefunden.")
+        st.info("Keine grünen Torschützen-Kandidaten mit verifizierter Form und Spielzeit gefunden. Es werden keine Tipps ergänzt.")
         return
-    st.success(f"{len(picks)} Spiele mit überprüfbarer aktueller Spielerform ausgewertet.")
+    st.success(f"{len(picks)} grüne Torschützen-Tipps mit überprüfbarer aktueller Form aus {len({(p['league'],p['fixture']) for p in picks})} Begegnungen.")
     for index,p in enumerate(picks,1):
         form=p["form"]
-        st.markdown(f'**{index}. {html.escape(p["name"])}** · {html.escape(p["team"])} · {p["league"]}')
-        st.caption(f'{p["match"]} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse · Formwert {p["form_score"]:.2f} · Saison-Torprognose {pct(p["p"])}')
-    st.metric("Ausgewählte Spiele",len(picks))
+        avg_minutes=(form.get("minutes") or 0)/form["played"]
+        unit="Eiszeit" if p["sport"]=="hockey" else "Spielzeit"
+        st.markdown(f'**{index}. 🟢 {html.escape(p["name"])}** · {html.escape(p["team"])} · {p["league"]}')
+        st.caption(f'{p["match"]} · Angepasste Torprognose: {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])} · Letzte {form["played"]} Einsätze: {form["goals"]} Tore, {form["shots"]} Schüsse, Ø {avg_minutes:.1f} Min. {unit}')
+    st.metric("Ausgewählte Tipps",len(picks))
     if len(picks)>1:
-        chance=100*math.prod(p["p"]/100 for p in picks)
-        st.metric("Vereinfachte rechnerische Kombi-Chance",pct(chance))
-    st.warning("Die Form-Rangfolge basiert auf tatsächlichen Einzelspielen, nicht auf einer Garantie. Die Kombi-Chance nutzt separate Saison-Schätzungen und unterstellt vereinfachend unabhängige Ereignisse.")
+        chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
+        st.metric("Rechnerische Kombi-Chance (heuristisch)",pct(chance))
+    st.warning("Grün bedeutet nur mindestens 30 % im Fußball bzw. 25 % im Eishockey nach einer heuristischen Form-/Spielzeit-Anpassung – nicht sicher. Die Kombi-Chance unterstellt vereinfachend unabhängige Tipps; die Schätzungen sind nicht kalibriert.")
+
 
 def render_combo_picks(picks,requested):
     if not picks:
@@ -609,11 +657,11 @@ def render_combo_picks(picks,requested):
 def combo_view(day,sport,league):
     st.subheader("🎟️ Kombi & Wettschein-Prüfung")
     st.caption("Modellbasierte Torschützen-Kandidaten. Keine sicheren Tipps oder bestätigten Buchmacherquoten.")
-    tab_daily,tab_all,tab_check=st.tabs(["📅 Form-Tages-Kombi","🔥 Große Form-Kombi","🔎 Wettschein prüfen"])
+    tab_daily,tab_all,tab_check=st.tabs(["📅 Grüne Tages-Kombi","🔥 Große Grün-Kombi","🔎 Wettschein prüfen"])
     with tab_daily:
         amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=6)
         st.caption(f"Auswahl: {league} · {day.strftime('%d.%m.%Y')} · Markt: Spieler erzielt mindestens ein Tor im Gesamtspiel")
-        st.caption("Auswahl nach echter Form der letzten fünf Spiele: Tore, Schüsse und beim Fußball Einsatzminuten. Je Begegnung höchstens ein Tipp.")
+        st.caption("Nur grüne Kandidaten: höchste angepasste Torprognose je Spiel, unter Berücksichtigung der letzten fünf Einsätze und Spielzeit/Eiszeit. Bis zu zwei Tipps pro Begegnung.")
         if league=="DEL":
             st.info("Für DEL liegen noch keine überprüfbaren Einzelspiel-Daten der letzten fünf Spiele vor. Deshalb kann keine echte Form-Tages-Kombi erstellt werden.")
         else:
@@ -625,11 +673,11 @@ def combo_view(day,sport,league):
                     ranked=rank_candidates_by_verified_form(pool,day)
                 picks=ranked[:amount]
                 if len(ranked)<amount:
-                    st.warning(f"Nur {len(ranked)} Begegnungen mit überprüfbarer aktueller Form gefunden; keine Tipps werden ergänzt oder erfunden.")
+                    st.warning(f"Nur {len(ranked)} grüne Tipps mit überprüfbarer aktueller Form gefunden; keine Tipps werden ergänzt oder erfunden.")
                 render_form_combo(picks)
     with tab_all:
-        st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Beste aktuelle Form aus den Top 5 jeder Mannschaft")
-        st.caption("Bewertet werden echte Einzelspiele der letzten fünf Partien: Tore, Schüsse und beim Fußball Einsatzminuten. Maximal ein Tipp je Begegnung.")
+        st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Höchste grüne Torprognose aus den Top 5 jeder Mannschaft")
+        st.caption("Bewertet werden echte letzte fünf Einsätze inklusive Tore, Schüsse und Spielzeit/Eiszeit. Nur grüne Tipps; maximal zwei je Begegnung.")
         st.info("DEL: Die vorhandenen DEL-Daten enthalten nur Saisonwerte, keine überprüfbaren letzten fünf Einzelspiele. DEL wird hier deshalb vorerst nicht als aktuelle Form ausgegeben.")
         if st.button("🔥 Große Form-Kombi für diesen Tag berechnen",key=f"form_{day}"):
             st.session_state["form_day"]=str(day)
