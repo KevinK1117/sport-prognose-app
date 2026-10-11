@@ -301,7 +301,7 @@ def show_players(players,period_label,sport="hockey"):
         for p in players:
             stats=player_form_details(p,sport,day)
             show_player(p,period_label,sport,stats,True)
-            favorite_button(p,f"card_{sport}_{p.get('team')}_{p.get('name')}")
+            favorite_button({**p, "league": p.get("league") or ("NHL" if sport == "nhl" else "DEL" if sport == "del" else "")},f"card_{sport}_{p.get('team')}_{p.get('name')}")
     with tab2:
         table=[]
         for p in players:
@@ -589,24 +589,69 @@ def update_favorites(favorites):
     return True
 
 
+def favorite_league(player):
+    """Normalize the league for both player cards and combo picks."""
+    league = str(player.get("league") or "").strip()
+    if league in ("NHL", "DEL") or league in LEAGUES:
+        return league
+    sport = str(player.get("sport") or "").lower()
+    if sport == "nhl":
+        return "NHL"
+    if sport == "del":
+        return "DEL"
+    if sport == "hockey" and player.get("player_id"):
+        return "NHL"
+    return league or ("NHL" if player.get("player_id") and not player.get("team_id") else "")
+
+
 def favorite_key(player):
-    league=player.get("league") or player.get("sport","")
+    league = favorite_league(player)
     return f"{league}:{player.get('player_id') or player.get('team','')}:{player.get('name','')}"
 
 
-def favorite_button(player, prefix):
-    favorites=current_favorites()
-    key=favorite_key(player)
-    label="⭐ Favorisiert" if key in favorites else "☆ Favorisieren"
-    if st.button(label,key=f"fav_{prefix}_{abs(hash(key))}"):
-        new=dict(favorites)
-        if key in new: del new[key]
+def matching_favorite_keys(favorites, player):
+    """Recognize older keys with missing league without creating duplicates."""
+    expected_league = favorite_league(player)
+    expected_id = str(player.get("player_id") or "")
+    expected_name = normalize_team(player.get("name"))
+    expected_team = normalize_team(player.get("team"))
+    matches = []
+    for key, entry in favorites.items():
+        if not isinstance(entry, dict):
+            continue
+        saved_league = str(entry.get("league") or "").strip()
+        if saved_league and saved_league != expected_league:
+            continue
+        saved_id = str(entry.get("player_id") or "")
+        if expected_id and saved_id:
+            same_player = expected_id == saved_id
         else:
-            league=player.get("league") or player.get("sport")
-            if league in ("hockey", "nhl") and player.get("player_id"): league="NHL"
-            new[key]={"name":player.get("name"),"team":player.get("team"),
-                      "league":league,"player_id":player.get("player_id"),"team_id":player.get("team_id")}
-        if update_favorites(new): st.rerun()
+            same_player = (normalize_team(entry.get("name")) == expected_name
+                           and normalize_team(entry.get("team")) == expected_team)
+        if same_player:
+            matches.append(key)
+    return matches
+
+
+def favorite_button(player, prefix):
+    favorites = current_favorites()
+    league = favorite_league(player)
+    player = {**player, "league": league}
+    key = favorite_key(player)
+    old_keys = matching_favorite_keys(favorites, player)
+    is_favorite = key in favorites or bool(old_keys)
+    label = "⭐ Favorisiert" if is_favorite else "☆ Favorisieren"
+    if st.button(label, key=f"fav_{prefix}_{abs(hash(key))}"):
+        new = dict(favorites)
+        if is_favorite:
+            for old_key in set(old_keys + [key]):
+                new.pop(old_key, None)
+        else:
+            new[key] = {"name": player.get("name"), "team": player.get("team"),
+                        "league": league, "player_id": player.get("player_id"),
+                        "team_id": player.get("team_id")}
+        if update_favorites(new):
+            st.rerun()
 
 
 @st.cache_data(ttl=300,show_spinner=False)
