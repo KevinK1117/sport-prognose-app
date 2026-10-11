@@ -75,5 +75,12 @@
     "league": "NHL",
     "player_id": 8477919,
     "team_id": null
+  },
+  "NHL:8482109:Alexis Lafrenière": {
+    "name": "Alexis Lafrenière",
+    "team": "NYR",
+    "league": "NHL",
+    "player_id": 8482109,
+    "team_id": null
   }
 }
