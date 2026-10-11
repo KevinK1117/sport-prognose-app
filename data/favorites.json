@@ -68,5 +68,12 @@
     "league": "NHL",
     "player_id": 8482713,
     "team_id": null
+  },
+  "NHL:8477919:Frederick Gaudreau": {
+    "name": "Frederick Gaudreau",
+    "team": "SEA",
+    "league": "NHL",
+    "player_id": 8477919,
+    "team_id": null
   }
 }
