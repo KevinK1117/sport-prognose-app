@@ -1,1 +1,30 @@
 
+name: SportRadar Toralarm
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: sportradar-toralarm
+  cancel-in-progress: false
+jobs:
+  check-goals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - run: python toralarm.py
+        env:
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      - name: Persist processed goals
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/toralarm_state.json
+          git diff --cached --quiet || (git commit -m 'Update SportRadar toralarm state' && git push)
