@@ -266,12 +266,22 @@ def nhl_own_form_grade(stats):
     return round(min(10.0,max(0.0, 2.0+goals*4.0+shots*.55+min(avg_toi,25)*.12)),1)
 
 
+st.markdown("<style>.sr-data-note{font-size:.74rem;color:#acc5d8;margin-top:8px;line-height:1.45}.sr-pred-chips{display:flex;flex-wrap:wrap;gap:3px}</style>",unsafe_allow_html=True)
+
 def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
     tier=probability_tier(player.get("p"),sport)
     name=html.escape(str(player["name"])); team=html.escape(str(player["team"]))
     pills=[f'Position: {player.get("position") or "Unbekannt"}',f'{player["goals"]} Tore',f'{player["games"]} Spiele']
     if player.get("shots") is not None: pills.append(f'{player["shots"]} Schüsse')
     if player.get("minutes") is not None: pills.append(f'{player["minutes"]:.0f} Min Ø')
+    # Only display per-match rates supported by real provider values.
+    games_count=player.get("games") or 0
+    if games_count and isinstance(player.get("shots"),(int,float)):
+        pills.append(f'{player["shots"]/games_count:.1f} Schüsse/Spiel')
+    if sport=="football" and games_count and isinstance(player.get("shots_on"),(int,float)):
+        pills.append(f'{player["shots_on"]/games_count:.1f} aufs Tor/Spiel')
+    if sport=="football" and isinstance(player.get("xg"),(int,float)):
+        pills.append(f'xG {player["xg"]:.2f}')
     chips="".join('<span class="pill">'+html.escape(str(item))+"</span>" for item in pills)
     if show_form:
         if form_stats and form_stats.get("played",0)>=3:
@@ -294,6 +304,14 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
             form_html=''
     else:
         form_html=''
+    # Transparent data provenance: unavailable metrics are not fabricated.
+    data_notes=[]
+    if sport=="football":
+        if player.get("xg") is None: data_notes.append("xG nicht verfügbar")
+        data_notes.append("Startelf/Verletzungen nur bei bestätigter Datenlage")
+    else:
+        data_notes.append("PP1/Powerplay-Eiszeit nur bei vorhandenen Daten")
+    notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
     portrait=safe_logo(player.get("photo"))
     if not portrait and sport=="football" and player.get("player_id"):
         portrait=f'https://media.api-sports.io/football/players/{player["player_id"]}.png'
@@ -307,7 +325,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     grade_text=f'{grade_value:.1f}'.replace('.',',') if grade_value is not None else '–'
     grade_color=("green" if grade_value is not None and grade_value>=8 else "yellow" if grade_value is not None and grade_value>=6 else "red" if grade_value is not None else "unknown")
     league_text=html.escape(str(player.get("league") or ("NHL" if sport=="nhl" else "DEL" if sport=="del" else "Fußball")))
-    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{form_html}</div>''',unsafe_allow_html=True)
+    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{form_html}{notes_html}</div>''',unsafe_allow_html=True)
 
 
 def show_players(players,period_label,sport="hockey"):
@@ -362,7 +380,7 @@ def football_players(league_id,year,team_id,key):
                 total_goals=goals.get("total") or 0; total_minutes=games.get("minutes")
                 avg_minutes=total_minutes/apps if isinstance(total_minutes,(int,float)) and total_minutes>0 else None
                 ident=player.get("id") or player.get("name")
-                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","position":games.get("position") or "Unbekannt","goals":total_goals,"games":apps,"shots":shots.get("total"),"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
+                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","position":games.get("position") or "Unbekannt","goals":total_goals,"games":apps,"shots":shots.get("total"),"shots_on":shots.get("on"),"xg":None,"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
         if len(rows)<20: break
     return list(result.values())
 
@@ -1115,6 +1133,58 @@ def adjusted_goal_probability(player, stats):
     return min(99.0,round(base*goal_factor*time_factor,2))
 
 
+def combo_evidence_score(player, stats):
+    """Rank with measured opportunities and deployment; missing inputs add no points."""
+    n=max(1,int(stats.get("played") or 1))
+    season_games=max(1,int(player.get("games") or 1))
+    avg_time=(stats.get("minutes") or 0)/n
+    recent_shots=(stats.get("shots") or 0)/n
+    score=0.0
+    # Recent shot volume and actual time on the field/ice matter more than hot streaks.
+    score+=min(5.0,recent_shots)*2.0
+    if player.get("sport")=="football":
+        score+=min(90.0,avg_time)/90.0*5.0
+        on=player.get("shots_on")
+        if isinstance(on,(int,float)):
+            score+=min(3.0,on/season_games)*3.0
+        xg=player.get("xg")
+        if isinstance(xg,(int,float)) and xg>=0:
+            score+=min(1.0,xg/season_games)*10.0
+        if player.get("penalty_taker") is True:
+            score+=3.0
+    else:
+        score+=min(25.0,avg_time)/25.0*5.0
+        pp=player.get("powerplay_minutes")
+        if isinstance(pp,(int,float)) and pp>=0:
+            score+=min(6.0,pp)*1.5
+        if player.get("pp1") is True:
+            score+=2.0
+    return round(score,3)
+
+
+def combo_evidence_caption(player, form):
+    n=max(1,int(form.get("played") or 1))
+    games=max(1,int(player.get("games") or 1))
+    labels=[f"Ø {(form.get('shots') or 0)/n:.1f} Schüsse (letzte {n})"]
+    labels.append(f"Ø {(form.get('minutes') or 0)/n:.1f} Min. {'Eiszeit' if player.get('sport')=='hockey' else 'Spielzeit'}")
+    if player.get("sport")=="football":
+        if isinstance(player.get("shots_on"),(int,float)):
+            labels.append(f"Ø {player['shots_on']/games:.1f} Schüsse aufs Tor (Saison)")
+        if isinstance(player.get("xg"),(int,float)):
+            labels.append(f"xG {player['xg']:.2f} (Saison)")
+        else:
+            labels.append("xG: keine Daten")
+        labels.append("Elfmeter: bestätigt" if player.get("penalty_taker") is True else "Elfmeterschütze: nicht verifiziert")
+    else:
+        if isinstance(player.get("powerplay_minutes"),(int,float)):
+            labels.append(f"Ø {player['powerplay_minutes']:.1f} Min. Powerplay")
+        else:
+            labels.append("Powerplay-Eiszeit: keine Daten")
+        if player.get("pp1") is True:
+            labels.append("PP1: bestätigt")
+    return " · ".join(labels)
+
+
 def rank_candidates_by_verified_form(pool,day):
     """Choose up to two highest adjusted green scorers per fixture from each team's top five."""
     teams={}
@@ -1143,8 +1213,8 @@ def rank_candidates_by_verified_form(pool,day):
             if adjusted is None or probability_tier(adjusted,player["sport"])!="high":
                 continue
             score=form_score(stats,player["sport"])
-            evaluated.append({**player,"form":stats,"form_score":score,"adjusted_p":adjusted})
-    evaluated.sort(key=lambda p:(p["adjusted_p"],p["form_score"]),reverse=True)
+            evaluated.append({**player,"form":stats,"form_score":score,"adjusted_p":adjusted,"evidence_score":combo_evidence_score(player,stats)})
+    evaluated.sort(key=lambda p:(p["adjusted_p"] + p["evidence_score"] * 0.35,p["evidence_score"],p["form_score"]),reverse=True)
     picks=[]; per_match={}
     for player in evaluated:
         key=(player["league"],player["fixture"])
@@ -1254,6 +1324,7 @@ def render_form_combo(picks, view_key="default"):
         st.markdown(f'<div class="sr-combo-probs"><div><small>{period_name}</small><strong>{pct(period_value)}</strong></div><div><small>Gesamtspiel</small><strong>{pct(p["adjusted_p"])}</strong></div></div>',unsafe_allow_html=True)
         st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
+        st.caption("📊 Auswahlfaktoren: " + combo_evidence_caption(p,form))
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
     st.metric("Ausgewählte Tipps",len(picks))
