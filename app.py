@@ -1268,31 +1268,44 @@ def adjusted_goal_probability(player, stats):
 
 
 def combo_evidence_score(player, stats):
-    """Rank with measured opportunities and deployment; missing inputs add no points."""
+    """Evidence-based ranking score, not a calibrated probability.
+
+    Uses available xG/ixG, verified recent shots and deployment. Opponent
+    adjustment is applied only when a source actually provides the factor.
+    """
     n=max(1,int(stats.get("played") or 1))
-    season_games=max(1,int(player.get("games") or 1))
-    avg_time=(stats.get("minutes") or 0)/n
-    recent_shots=(stats.get("shots") or 0)/n
+    shots=max(0.0,float(stats.get("shots") or 0)/n)
+    minutes=max(0.0,float(stats.get("minutes") or 0)/n)
+    metrics=player.get("v2_metrics") or {}
     score=0.0
-    # Recent shot volume and actual time on the field/ice matter more than hot streaks.
-    score+=min(5.0,recent_shots)*2.0
     if player.get("sport")=="football":
-        score+=min(90.0,avg_time)/90.0*5.0
-        on=player.get("shots_on")
-        if isinstance(on,(int,float)):
-            score+=min(3.0,on/season_games)*3.0
-        xg=player.get("xg")
-        if isinstance(xg,(int,float)) and xg>=0:
-            score+=min(1.0,xg/season_games)*10.0
-        if player.get("penalty_taker") is True:
-            score+=3.0
+        xg90=metrics.get("npxg90")
+        if not isinstance(xg90,(int,float)): xg90=metrics.get("xg90")
+        if isinstance(xg90,(int,float)) and math.isfinite(xg90) and xg90>=0:
+            score+=min(1.5,xg90)*18.0
+        shots90=metrics.get("shots90")
+        if isinstance(shots90,(int,float)) and math.isfinite(shots90) and shots90>=0:
+            score+=min(6.0,shots90)*2.0
+        else:
+            score+=min(5.0,shots)*2.0
+        score+=min(90.0,minutes)/90.0*9.0
+        expected=metrics.get("expected_minutes")
+        if isinstance(expected,(int,float)) and math.isfinite(expected) and expected>=0:
+            score+=min(90.0,expected)/90.0*5.0
     else:
-        score+=min(25.0,avg_time)/25.0*5.0
+        ixg=metrics.get("ixg60")
+        if isinstance(ixg,(int,float)) and math.isfinite(ixg) and ixg>=0:
+            score+=min(3.0,ixg)*9.0
+        score+=min(7.0,shots)*2.5
+        score+=min(25.0,minutes)/25.0*9.0
         pp=player.get("powerplay_minutes")
-        if isinstance(pp,(int,float)) and pp>=0:
-            score+=min(6.0,pp)*1.5
-        if player.get("pp1") is True:
-            score+=2.0
+        if isinstance(pp,(int,float)) and pp>=0: score+=min(6.0,pp)*1.5
+        if player.get("pp1") is True: score+=3.0
+    # Modest recent-goal signal, so small samples do not dominate xG/shots.
+    score+=min(1.0,max(0.0,float(stats.get("goals") or 0)/n))*5.0
+    opponent=metrics.get("opponent_factor")
+    if isinstance(opponent,(int,float)) and math.isfinite(opponent) and opponent>0:
+        score*=max(.8,min(1.2,opponent))
     return round(score,3)
 
 
@@ -1316,11 +1329,28 @@ def combo_evidence_caption(player, form):
             labels.append("Powerplay-Eiszeit: keine Daten")
         if player.get("pp1") is True:
             labels.append("PP1: bestätigt")
+    metrics=player.get("v2_metrics") or {}
+    xg=metrics.get("npxg90") if player.get("sport")=="football" else metrics.get("ixg60")
+    if not isinstance(xg,(int,float)):
+        xg=metrics.get("xg90") if player.get("sport")=="football" else None
+    if isinstance(xg,(int,float)):
+        labels.append(f"{"xG/90" if player.get('sport')=='football' else 'ixG/60'} {xg:.2f}")
+    opponent=metrics.get("opponent_factor")
+    if isinstance(opponent,(int,float)) and opponent>0:
+        labels.append(f"Gegnerfaktor {opponent:.2f}")
     return " · ".join(labels)
 
 
+def combo_preselection_bonus(player):
+    """Allow strong verified chance creators into each team's five-player shortlist."""
+    m=player.get("v2_metrics") or {}
+    key="xg90" if player.get("sport")=="football" else "ixg60"
+    x=m.get(key)
+    return min(15.0,max(0.0,float(x))*10.0) if isinstance(x,(int,float)) and math.isfinite(x) else 0.0
+
+
 def rank_candidates_by_verified_form(pool,day):
-    """Choose up to two highest adjusted green scorers per fixture from each team's top five."""
+    """Select evidence-ranked green scorers, max two per fixture."""
     teams={}
     for original in pool:
         player=enriched_player(original)
@@ -1332,7 +1362,7 @@ def rank_candidates_by_verified_form(pool,day):
     football_forms={}
     evaluated=[]
     for team_key,players in teams.items():
-        for player in sorted(players,key=lambda p:p.get("p") or 0,reverse=True)[:5]:
+        for player in sorted(players,key=lambda p:(p.get("p") or 0) + combo_preselection_bonus(p),reverse=True)[:5]:
             if player["sport"]=="football":
                 team_id=player.get("team_id")
                 if not team_id or not player.get("player_id"): continue
@@ -1349,7 +1379,7 @@ def rank_candidates_by_verified_form(pool,day):
                 continue
             score=form_score(stats,player["sport"])
             evaluated.append({**player,"form":stats,"form_score":score,"adjusted_p":adjusted,"evidence_score":combo_evidence_score(player,stats)})
-    evaluated.sort(key=lambda p:(p["adjusted_p"] + p["evidence_score"] * 0.35,p["evidence_score"],p["form_score"]),reverse=True)
+    evaluated.sort(key=lambda p:(p["adjusted_p"] * 0.55 + p["evidence_score"] * 0.85,p["adjusted_p"],p["form_score"]),reverse=True)
     picks=[]; per_match={}
     for player in evaluated:
         key=(player["league"],player["fixture"])
@@ -1470,7 +1500,7 @@ def render_form_combo(picks, view_key="default"):
     if len(picks)>1:
         chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
         st.metric("Rechnerische Kombi-Chance (heuristisch)",pct(chance))
-    st.warning("Grün bedeutet nur mindestens 30 % im Fußball bzw. 25 % im Eishockey nach einer heuristischen Form-/Spielzeit-Anpassung – nicht sicher. Die Kombi-Chance unterstellt vereinfachend unabhängige Tipps; die Schätzungen sind nicht kalibriert.")
+    st.warning("Auswahl nach Tor-Modell, xG/ixG (falls vorhanden), Schüssen, aktueller Form und Einsatzzeit; Gegnerfaktor nur bei vorhandenen Daten. Grün ist keine Wettempfehlung. Die rechnerische Kombi-Chance nimmt Unabhängigkeit an und ist nicht kalibriert.")
 
 
 def render_combo_picks(picks,requested):
