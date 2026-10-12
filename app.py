@@ -457,7 +457,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     grade_text=f'{grade_value:.1f}'.replace('.',',') if grade_value is not None else '–'
     grade_color=("green" if grade_value is not None and grade_value>=8 else "yellow" if grade_value is not None and grade_value>=6 else "red" if grade_value is not None else "unknown")
     league_text=html.escape(str(player.get("league") or ("NHL" if sport=="nhl" else "DEL" if sport=="del" else "Fußball")))
-    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{highlights_html}{form_html}{notes_html}</div>''',unsafe_allow_html=True)
+    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div><div class="sr-pred-details sr-pred-always-visible"><div class="sr-pred-detail-body">{highlights_html}{form_html}{notes_html}</div></div></div>''',unsafe_allow_html=True)
 
 
 def show_players(players,period_label,sport="hockey"):
@@ -1918,4 +1918,34 @@ st.markdown("""<style>
 .sr-pred-compact .player-head{font-weight:900!important}
 .sr-combo-spotlight{border-color:#168dff!important}
 @media(min-width:900px){.block-container{max-width:1320px!important}}
+</style>""",unsafe_allow_html=True)
+
+# Mobile-first: significantly smaller player cards; extended statistics remain accessible.
+st.markdown("""<style>
+.sr-pred-compact{padding:9px!important;margin:6px 0 9px!important;border-radius:13px!important}
+.sr-pred-compact .sr-pred-head{gap:7px!important;margin-bottom:5px!important}
+.sr-pred-compact .sr-pred-photo{width:46px!important;height:50px!important;flex:0 0 46px!important;border-radius:8px!important}
+.sr-pred-compact .sr-pred-identity .player-head{font-size:clamp(.96rem,3.7vw,1.18rem)!important;line-height:1.15!important}
+.sr-pred-compact .sr-pred-league{font-size:.72rem!important;margin-top:2px!important}
+.sr-pred-compact .sr-pred-grade{flex:0 0 70px!important;padding:4px 3px!important;border-radius:8px!important}
+.sr-pred-compact .sr-pred-grade small{font-size:.52rem!important;line-height:1.12!important}
+.sr-pred-compact .sr-pred-grade strong{font-size:1.04rem!important;margin-top:2px!important}
+.sr-pred-compact .pair{gap:6px!important;margin:5px 0!important}
+.sr-pred-compact .prob{padding:5px 3px!important;border-radius:8px!important}
+.sr-pred-compact .prob small{font-size:.67rem!important}
+.sr-pred-compact .prob strong{font-size:clamp(1rem,4vw,1.3rem)!important}
+.sr-pred-compact .sr-pred-chips{gap:3px!important;margin-top:4px!important}
+.sr-pred-compact .sr-pred-chips .pill{font-size:.65rem!important;padding:2px 5px!important;margin:1px!important;border-radius:6px!important}
+.sr-pred-details{margin-top:4px;border-top:1px solid #1b567e;padding-top:4px}
+.sr-pred-details summary{cursor:pointer;list-style:none;color:#7cebd4;font-size:.73rem;font-weight:750;padding:3px 1px;user-select:none}
+.sr-pred-details summary::-webkit-details-marker{display:none}
+.sr-pred-details summary::after{content:'  ▾';color:#8dc9eb}
+.sr-pred-details[open] summary::after{content:'  ▴'}
+.sr-pred-detail-body{padding-top:4px}
+.sr-pred-details .sr-metric-highlights{gap:5px!important;margin:5px 0!important}
+.sr-pred-details .sr-metric-highlight{padding:6px 8px!important;border-width:1px!important;border-radius:8px!important;flex:1 1 115px!important}
+.sr-pred-details .sr-metric-highlight small{font-size:.68rem!important}
+.sr-pred-details .sr-metric-highlight strong{font-size:.94rem!important;margin-top:2px!important}
+.sr-pred-details .sr-daily-evidence{padding:6px 8px!important;margin-top:6px!important;font-size:.73rem!important}
+@media(max-width:480px){.sr-pred-compact{padding:8px!important}.sr-pred-compact .sr-pred-grade{flex-basis:64px!important}.sr-pred-compact .sr-pred-photo{width:42px!important;height:47px!important;flex-basis:42px!important}}
 </style>""",unsafe_allow_html=True)
