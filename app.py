@@ -322,8 +322,63 @@ def daily_player_evidence(player):
     if normalize_team(entry.get('team'))!=normalize_team(player.get('team')):return None
     return entry
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _football_advanced_rows(csv_mtime):
+    """Read the GitHub-persisted Understat feed, not the ephemeral SQLite import."""
+    import csv
+    path=Path(__file__).resolve().parent/'data'/'advanced_player_metrics.csv'
+    try:
+        with path.open(encoding='utf-8-sig',newline='') as fh:
+            return [r for r in csv.DictReader(fh) if r.get('sport')=='Fußball' and r.get('sample')=='season']
+    except (OSError, UnicodeError, csv.Error):
+        return []
+
+
+def _football_csv_prediction(player):
+    """Overlay only unambiguous same-team Understat players with genuine xG and minutes."""
+    import math
+    import unicodedata
+    def norm(v):
+        return ''.join(c for c in unicodedata.normalize('NFKD',str(v or '').casefold()) if c.isalnum())
+    def val(v):
+        try:
+            x=float(v)
+            return x if math.isfinite(x) else None
+        except (ValueError,TypeError):
+            return None
+    path=Path(__file__).resolve().parent/'data'/'advanced_player_metrics.csv'
+    try: rows=_football_advanced_rows(path.stat().st_mtime_ns)
+    except OSError: return player
+    team=norm(player.get('team'))
+    name=norm(player.get('name'))
+    # Explicit, team-scoped alias. Do not fuzzy-match unrelated footballers.
+    aliases={('levante','brugi'):'rogerbrugue'}
+    name=aliases.get((team,name),name)
+    matches=[r for r in rows if norm(r.get('team'))==team and norm(r.get('name'))==name]
+    if len(matches)!=1:return player
+    r=matches[0]
+    xg=val(r.get('xg90')); mins=val(r.get('expected_minutes'))
+    if xg is None or mins is None or not (0<=xg<=5 and 0<mins<=120):return player
+    # Do not use data from after the scheduled match.
+    fixture=str(player.get('kickoff') or '')[:10]
+    if fixture and str(r.get('as_of') or '')[:10]>fixture:return player
+    lam=xg*mins/90
+    output=dict(player)
+    output['p']=round(100*(-math.expm1(-lam)),2)
+    output['half']=round(100*(-math.expm1(-lam*.45)),2)
+    output['xg']=round(lam,4)
+    output['v2_model']='Understat xG/Spielzeit-Modell (Poisson; Halbzeit angenähert)'
+    output['v2_source']=r.get('source') or 'Understat'
+    output['v2_metrics']={k:val(r.get(k)) for k in ('npxg90','xg90','shots90','shots_on_target90','shots_in_box90','expected_minutes','team_xg','opponent_factor')}
+    return output
+
+
 def enriched_player(player):
     """Use verified SportRadar v2 next/season metrics when available; otherwise retain legacy model."""
+    if player.get('sport')=='football':
+        enriched=_football_csv_prediction(player)
+        if enriched is not player:
+            return enriched
     try:
         from sport_database import match_prediction
         return match_prediction(player)
