@@ -1,6 +1,3 @@
-
-
-
 """SportRadar – football, NHL and DEL goalscorer estimates."""
 import html
 import base64
@@ -295,9 +292,47 @@ def spotlight_metrics(player, sport, form=None):
         blocks.append(tile('🏒 Ø Eiszeit / Spiel',f'{minutes:.1f} Min.'.replace('.',',') if minutes is not None else 'Nicht verfügbar','ice',minutes is None))
         pp=player.get('powerplay_minutes')
         blocks.append(tile('⚡ Ø Powerplay-Eiszeit',f'{pp:.1f} Min.'.replace('.',',') if isinstance(pp,(int,float)) else 'Nicht verfügbar','ice',not isinstance(pp,(int,float))))
+    if player.get('v2_model'):
+        v2=player.get('v2_metrics') or {}
+        if sport=='football':
+            for field,label in [('npxg90','Non-Penalty xG / 90'),('shots90','Schüsse / 90'),('shots_in_box90','Strafraum-Schüsse / 90'),('shots_on_target90','Schüsse aufs Tor / 90'),('expected_minutes','Erwartete Spielminuten'),('team_xg','Team-xG (Prognose)')]:
+                if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',',')))
+            if v2.get('penalty_taker')==1: blocks.append(tile('🎯 Elfmeter','Bestätigt'))
+        else:
+            for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Chancen / Spiel')]:
+                if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',','),'ice'))
+            if v2.get('pp1')==1: blocks.append(tile('⚡ Powerplay','PP1 bestätigt','ice'))
+    if player.get('v2_model'):
+        opponent=(player.get('v2_metrics') or {}).get('opponent_factor')
+        if isinstance(opponent,(int,float)):blocks.append(tile('Gegnerfaktor',f'{opponent:.2f}'.replace('.',',')))
     return '<div class="sr-metric-highlights">'+''.join(blocks)+'</div>'
 
+@st.cache_data(ttl=120,show_spinner=False)
+def daily_player_stats():
+    path=Path(__file__).resolve().parent/'data'/'daily_player_stats.json'
+    try: return json.loads(path.read_text(encoding='utf-8'))
+    except (OSError,ValueError):return {}
+
+
+def daily_player_evidence(player):
+    pid=player.get('player_id')
+    if not pid:return None
+    entry=daily_player_stats().get('nhl',{}).get(str(pid))
+    if not entry:return None
+    if normalize_team(entry.get('team'))!=normalize_team(player.get('team')):return None
+    return entry
+
+def enriched_player(player):
+    """Use verified SportRadar v2 next/season metrics when available; otherwise retain legacy model."""
+    try:
+        from sport_database import match_prediction
+        return match_prediction(player)
+    except (ImportError, OSError, ValueError):
+        return player
+
+
 def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
+    player=enriched_player(player)
     tier=probability_tier(player.get("p"),sport)
     name=html.escape(str(player["name"])); team=html.escape(str(player["team"]))
     pills=[f'Position: {player.get("position") or "Unbekannt"}',f'{player["goals"]} Tore',f'{player["games"]} Spiele']
@@ -342,6 +377,18 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
         data_notes.append("PP1/Powerplay-Eiszeit nur bei vorhandenen Daten")
     notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
     highlights_html=spotlight_metrics(player,sport,form_stats)
+    if sport=='nhl':
+        evidence=daily_player_evidence(player)
+        if evidence:
+            sample=evidence.get('last5') or {}
+            if sample.get('games'):
+                shots=sample.get('shots_on_target_game')
+                ice=sample.get('toi_game')
+                parts=[f"Letzte {sample['games']} Spiele: {sample.get('goals',0)} Tore"]
+                if shots is not None:parts.append(f"{shots:.1f} Schüsse aufs Tor/Spiel")
+                if ice is not None:parts.append(f"Ø Eiszeit {ice:.1f} Min")
+                highlights_html+='<div class="sr-daily-evidence">📅 <b>Täglich aktualisierte NHL-Statistik</b><br>'+html.escape(' · '.join(parts))+'</div>'
+
     portrait=safe_logo(player.get("photo"))
     if not portrait and sport=="football" and player.get("player_id"):
         portrait=f'https://media.api-sports.io/football/players/{player["player_id"]}.png'
@@ -364,12 +411,14 @@ def show_players(players,period_label,sport="hockey"):
     tab1,tab2=st.tabs(["🎯 Spielerprognosen","📊 Tabelle"])
     with tab1:
         for p in players:
+            p=enriched_player(p)
             stats=player_form_details(p,sport,day)
             show_player(p,period_label,sport,stats,True)
             favorite_button({**p, "league": p.get("league") or ("NHL" if sport == "nhl" else "DEL" if sport == "del" else "")},f"card_{sport}_{p.get('team')}_{p.get('name')}")
     with tab2:
         table=[]
         for p in players:
+            p=enriched_player(p)
             minutes=p.get("minutes")
             table.append({"Spieler":p["name"],"Team":p["team"],"Position":p.get("position"),period_label:pct(p.get("half")),"Gesamtspiel":pct(p.get("p")),"Tore":p["goals"],"Spiele":p["games"],"Schüsse":p.get("shots"),"Min Ø":round(minutes,1) if minutes is not None else None})
         st.dataframe(pd.DataFrame(table),hide_index=True,use_container_width=True)
@@ -1218,7 +1267,8 @@ def combo_evidence_caption(player, form):
 def rank_candidates_by_verified_form(pool,day):
     """Choose up to two highest adjusted green scorers per fixture from each team's top five."""
     teams={}
-    for player in pool:
+    for original in pool:
+        player=enriched_player(original)
         try:
             if datetime.fromisoformat(player["kickoff"])<=datetime.now(TZ): continue
         except (KeyError,ValueError,TypeError): continue
@@ -1239,7 +1289,7 @@ def rank_candidates_by_verified_form(pool,day):
             else:
                 stats=nhl_recent_form(player.get("player_id"),day)
             if not stats: continue
-            adjusted=adjusted_goal_probability(player,stats)
+            adjusted=(player.get("p") if player.get("v2_model") else adjusted_goal_probability(player,stats))
             if adjusted is None or probability_tier(adjusted,player["sport"])!="high":
                 continue
             score=form_score(stats,player["sport"])
@@ -1323,7 +1373,8 @@ def render_form_combo(picks, view_key="default"):
         st.info("Keine grünen Torschützen-Kandidaten mit verifizierter Form und Spielzeit gefunden. Es werden keine Tipps ergänzt.")
         return
     st.success(f"{len(picks)} grüne Torschützen-Tipps mit überprüfbarer aktueller Form aus {len({(p['league'],p['fixture']) for p in picks})} Begegnungen.")
-    for index,p in enumerate(picks,1):
+    for index,original in enumerate(picks,1):
+        p=enriched_player(original)
         form=p["form"]
         avg_minutes=(form.get("minutes") or 0)/form["played"]
         unit="Eiszeit" if p["sport"]=="hockey" else "Spielzeit"
@@ -1355,6 +1406,8 @@ def render_form_combo(picks, view_key="default"):
         st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
         st.markdown(spotlight_metrics(p, p["sport"], form), unsafe_allow_html=True)
+        if p.get("v2_model"): st.caption("📊 Datenbank 2.0 · " + p["v2_model"] + " · Quelle: " + p.get("v2_source", "unbekannt"))
+        if p.get("v2_as_of"): st.caption("🗓️ Statistikstand: " + p["v2_as_of"])
         st.caption("📊 Auswahlfaktoren: " + combo_evidence_caption(p,form))
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
@@ -1371,7 +1424,8 @@ def render_combo_picks(picks,requested):
         return
     if len(picks)<requested:
         st.warning(f"Nur {len(picks)} unterschiedliche geeignete Spiele gefunden. Es werden keine Tipps erfunden.")
-    for i,player in enumerate(picks,1):
+    for i,original in enumerate(picks,1):
+        player=enriched_player(original)
         tier=probability_tier(player["p"],player["sport"])
         symbol={"high":"🟢","mid":"🟠","low":"⚪"}[tier]
         st.markdown(f'**{i}. {symbol} {player["name"]}** · {player["team"]} · {player["league"]}')
@@ -1716,7 +1770,7 @@ st.markdown('<div class="sr-stadium-header"><div class="sr-header-icons">⌕ ♧
 
 
 st.caption("🇩🇪 Deutsche Zeit · Saison automatisch · Statistische Torprognosen")
-page=st.radio("Bereich",["🔴 Live-Ergebnisse","🎯 Torprognosen","🎟️ Kombi & Prüfung","⭐ Favoriten"],horizontal=True)
+page=st.radio("Bereich",["🔴 Live-Ergebnisse","🎯 Torprognosen","🎟️ Kombi & Prüfung","⭐ Favoriten","📊 Statistik-Datenbank"],horizontal=True)
 sport=st.radio("Sportart",["🏒 Eishockey","⚽ Fußball"],horizontal=True)
 leagues=["NHL","DEL"] if sport.startswith("🏒") else list(LEAGUES)
 league=st.selectbox("Liga",leagues)
@@ -1734,7 +1788,10 @@ if st.button("🔄 Daten neu laden"):
     st.cache_data.clear(); st.rerun()
 if page.startswith("🎯"):
     st.caption("🔥 Aktuelle Form automatisch: Fußball mit API-Football-Bewertungen; NHL und DEL mit eigenem SportRadar-Formindex, soweit Einzelspieldaten vorhanden sind.")
-if page.startswith("⭐"):
+if page.startswith("📊"):
+    from sport_database import dashboard
+    dashboard()
+elif page.startswith("⭐"):
     st.subheader("⭐ Meine Favoriten")
     st.caption("Favoriten werden mit GitHub synchronisiert, sobald GH_FAVORITES_TOKEN als Streamlit Secret hinterlegt ist. Toralarm benötigt zusätzlich den GitHub-Actions-Workflow.")
     if not secret("GH_FAVORITES_TOKEN"): st.warning("GH_FAVORITES_TOKEN fehlt: Favoriten sind nur während dieser Sitzung gespeichert und können keine Toralarme auslösen.")
@@ -1796,4 +1853,14 @@ st.markdown("""<style>
 .sr-combo-probs small{display:block;color:#fff3d8;font-size:.78rem}
 .sr-combo-probs strong{display:block;color:#ffe39b;font-size:1.35rem;line-height:1.35}
 .sr-combo-spotlight{margin-bottom:5px!important}
+</style>""",unsafe_allow_html=True)
+
+st.markdown("""<style>
+/* SportRadar mockup-inspired compact desktop and mobile cards */
+.sr-daily-evidence{background:#0b4052;color:#c8f9ed;border:1px solid #1b9b9b;border-radius:12px;padding:9px 12px;margin-top:10px;font-size:.85rem;line-height:1.5}
+.sr-pred-compact{background:linear-gradient(145deg,#08284e,#061a36)!important;border:1px solid #168dff!important;box-shadow:0 0 15px #007dff1c!important}
+.sr-pred-compact .pair .prob{background:#082d4c!important;border:1px solid #188fdf!important}
+.sr-pred-compact .player-head{font-weight:900!important}
+.sr-combo-spotlight{border-color:#168dff!important}
+@media(min-width:900px){.block-container{max-width:1320px!important}}
 </style>""",unsafe_allow_html=True)
