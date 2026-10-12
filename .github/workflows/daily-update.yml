@@ -33,6 +33,8 @@ jobs:
         run: python daily_update.py
 
       - name: Spielerstatistiken aktualisieren
+        id: player_update
+        continue-on-error: true
         run: python daily_player_update.py
 
       - name: xG und ixG aktualisieren
