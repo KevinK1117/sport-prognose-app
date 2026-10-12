@@ -352,7 +352,7 @@ def _football_csv_prediction(player):
     team=norm(player.get('team'))
     name=norm(player.get('name'))
     # Explicit, team-scoped alias. Do not fuzzy-match unrelated footballers.
-    aliases={('levante','brugi'):'rogerbrugue'}
+    aliases={('levante','brugui'):'rogerbrugue',('levante','brugi'):'rogerbrugue'}
     name=aliases.get((team,name),name)
     matches=[r for r in rows if norm(r.get('team'))==team and norm(r.get('name'))==name]
     if len(matches)!=1:return player
@@ -375,7 +375,7 @@ def _football_csv_prediction(player):
 
 def enriched_player(player):
     """Use verified SportRadar v2 next/season metrics when available; otherwise retain legacy model."""
-    if player.get('sport')=='football':
+    if player.get('sport')=='football' or (player.get('sport') is None and player.get('team_id') is not None):
         enriched=_football_csv_prediction(player)
         if enriched is not player:
             return enriched
@@ -466,14 +466,14 @@ def show_players(players,period_label,sport="hockey"):
     tab1,tab2=st.tabs(["🎯 Spielerprognosen","📊 Tabelle"])
     with tab1:
         for p in players:
-            p=enriched_player(p)
+            p=enriched_player({**p, 'sport':'football'} if sport=='football' else p)
             stats=player_form_details(p,sport,day)
             show_player(p,period_label,sport,stats,True)
             favorite_button({**p, "league": p.get("league") or ("NHL" if sport == "nhl" else "DEL" if sport == "del" else "")},f"card_{sport}_{p.get('team')}_{p.get('name')}")
     with tab2:
         table=[]
         for p in players:
-            p=enriched_player(p)
+            p=enriched_player({**p, 'sport':'football'} if sport=='football' else p)
             minutes=p.get("minutes")
             table.append({"Spieler":p["name"],"Team":p["team"],"Position":p.get("position"),period_label:pct(p.get("half")),"Gesamtspiel":pct(p.get("p")),"Tore":p["goals"],"Spiele":p["games"],"Schüsse":p.get("shots"),"Min Ø":round(minutes,1) if minutes is not None else None})
         st.dataframe(pd.DataFrame(table),hide_index=True,use_container_width=True)
