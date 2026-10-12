@@ -1,80 +1,176 @@
-"""Collect verified NHL individual game logs daily; never synthesize xG/PP minutes."""
+"""Update verified NHL player game logs without overwriting valid data on failure."""
 import concurrent.futures
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+
 import requests
 
-ROOT=Path(__file__).resolve().parent
-OUT=ROOT/'data'/'daily_player_stats.json'
-FIX=ROOT/'data'/'daily_fixtures.json'
-SESSION=requests.Session()
+ROOT = Path(__file__).resolve().parent
+OUT = ROOT / 'data' / 'daily_player_stats.json'
+FIX = ROOT / 'data' / 'daily_fixtures.json'
+BASE = 'https://api-web.nhle.com/v1/'
+
 
 def get(path):
-    try:
-        r=SESSION.get('https://api-web.nhle.com/v1/'+path,timeout=18)
-        r.raise_for_status()
-        return r.json()
-    except (requests.RequestException,ValueError):
-        return None
+    for attempt in range(3):
+        try:
+            response = requests.get(BASE + path, timeout=20, headers={'User-Agent': 'SportRadar/1.0 (NHL public statistics)'})
+            response.raise_for_status()
+            return response.json()
+        except (requests.RequestException, ValueError) as exc:
+            if attempt == 2:
+                print(f'WARN API {path}: {type(exc).__name__}: {exc}')
+            else:
+                time.sleep(0.5 * (attempt + 1))
+    return None
 
-def number(value):
-    try:return float(value)
-    except (ValueError,TypeError):return None
 
 def toi(value):
-    if isinstance(value,(float,int)):return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
     try:
-        parts=str(value).split(':')
-        return int(parts[0])+int(parts[1])/60 if len(parts)==2 else None
-    except (ValueError,TypeError):return None
+        parts = str(value).split(':')
+        return int(parts[0]) + int(parts[1]) / 60 if len(parts) == 2 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def season_codes(today):
+    start = today.year if today.month >= 7 else today.year - 1
+    return [f'{start}{start + 1}', f'{start - 1}{start}']
+
+
+def scheduled_clubs(fixture):
+    clubs = set()
+    nhl = fixture.get('nhl') or {}
+    payloads = nhl.values() if isinstance(nhl, dict) else (nhl if isinstance(nhl, list) else [])
+    for payload in payloads:
+        if isinstance(payload, dict):
+            games = payload.get('games', [])
+        elif isinstance(payload, list):
+            games = payload
+        else:
+            continue
+        for game in games:
+            if not isinstance(game, dict):
+                continue
+            for side in ('homeTeam', 'awayTeam'):
+                team = game.get(side) or {}
+                if isinstance(team, dict):
+                    abbreviation = team.get('abbrev')
+                    if isinstance(abbreviation, str) and abbreviation:
+                        clubs.add(abbreviation)
+    return clubs
+
+
+def name_part(value):
+    if isinstance(value, dict):
+        return value.get('default') or next(iter(value.values()), '')
+    return str(value or '')
+
 
 def main():
-    if not FIX.exists():raise SystemExit('daily_fixtures.json fehlt; zuerst daily_update.py ausführen')
-    fixture=json.loads(FIX.read_text(encoding='utf-8'))
-    clubs=set()
-    for payload in fixture.get('nhl',{}).values():
-        for game in (payload.get('games',[]) if isinstance(payload,dict) else []):
-            for side in ('homeTeam','awayTeam'):
-                team=game.get(side) or {}
-                if isinstance(team.get('abbrev'),str):clubs.add(team['abbrev'])
-    print('NHL teams scheduled:',len(clubs))
-    players=[]
-    for club in sorted(clubs):
-        stats=get(f'club-stats/{club}/now')
-        if not isinstance(stats,dict):continue
-        for p in stats.get('skaters',[]):
-            pid=p.get('playerId') or p.get('id')
-            if not pid:continue
-            first=p.get('firstName') or '';last=p.get('lastName') or ''
-            if isinstance(first,dict):first=first.get('default','')
-            if isinstance(last,dict):last=last.get('default','')
-            players.append((pid,club,(str(first)+' '+str(last)).strip(),p))
-    now=datetime.now(timezone.utc)
-    season=now.year if now.month>=7 else now.year-1
-    code=f'{season}{season+1}'
-    def collect(entry):
-        pid,club,name,season_row=entry
-        log=get(f'player/{pid}/game-log/{code}/2')
-        if not isinstance(log,dict):return None
-        games=[]
-        for g in log.get('gameLog',[]):
-            date=str(g.get('gameDate',''))[:10]
-            if not date or date>=now.date().isoformat():continue
-            games.append({'date':date,'goals':int(g.get('goals') or 0),'shots':int(g.get('shots') or 0),'toi':toi(g.get('toi') or g.get('timeOnIce'))})
-        games.sort(key=lambda x:x['date'],reverse=True)
-        if not games:return None
-        def summary(sample):
-            minutes=[g['toi'] for g in sample if g['toi'] is not None]
-            return {'games':len(sample),'goals':sum(g['goals'] for g in sample),'shots':sum(g['shots'] for g in sample),'toi_game':round(sum(minutes)/len(minutes),2) if minutes else None,'shots_on_target_game':round(sum(g['shots'] for g in sample)/len(sample),2)}
-        return str(pid),{'name':name,'team':club,'sport':'NHL','source':'NHL API / player game-log','updated_at':now.isoformat(),'season':summary(games),'last20':summary(games[:20]),'last5':summary(games[:5]),'games':games[:20],'ixg60':None,'pp_toi_game':None,'pp1':None}
-    result={}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-        for item in pool.map(collect,players):
-            if item:result[item[0]]=item[1]
-    if not result:raise SystemExit('Keine NHL-Spielerlogs abrufbar; bisherige Daten bleiben erhalten')
-    OUT.parent.mkdir(parents=True,exist_ok=True)
-    OUT.write_text(json.dumps({'updated_at':now.isoformat(),'nhl':result,'source':'NHL API'},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
-    print('NHL player records:',len(result),'saved:',OUT)
+    now = datetime.now(timezone.utc)
+    if not FIX.exists():
+        print('WARN: daily_fixtures.json fehlt; vorhandene Spielerstatistiken bleiben erhalten.')
+        return
+    try:
+        fixture = json.loads(FIX.read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        print(f'WARN: Fixtures nicht lesbar: {exc}')
+        return
 
-if __name__=='__main__':main()
+    clubs = scheduled_clubs(fixture)
+    print('NHL teams scheduled:', len(clubs))
+    if not clubs:
+        print('WARN: Keine NHL-Teams im Spielplan; vorhandene Daten bleiben erhalten.')
+        return
+
+    players = {}
+    for club in sorted(clubs):
+        stats = get(f'club-stats/{club}/now')
+        if not isinstance(stats, dict):
+            continue
+        for row in stats.get('skaters', []):
+            pid = row.get('playerId') or row.get('id')
+            if pid:
+                name = (name_part(row.get('firstName')) + ' ' + name_part(row.get('lastName'))).strip()
+                players[str(pid)] = (pid, club, name)
+    print('NHL skaters found:', len(players))
+    if not players:
+        print('WARN: Keine NHL-Kaderdaten verfügbar; vorhandene Daten bleiben erhalten.')
+        return
+
+    codes = season_codes(now.date())
+    today = now.date().isoformat()
+
+    def collect(entry):
+        pid, club, name = entry
+        games = []
+        for code in codes:
+            log = get(f'player/{pid}/game-log/{code}/2')
+            if not isinstance(log, dict):
+                continue
+            for game in log.get('gameLog', []):
+                date = str(game.get('gameDate', ''))[:10]
+                if not date or date >= today:
+                    continue
+                try:
+                    goals = int(game.get('goals') or 0)
+                    shots = int(game.get('shots') or 0)
+                except (ValueError, TypeError):
+                    continue
+                games.append({'date': date, 'goals': goals, 'shots': shots,
+                              'toi': toi(game.get('toi') or game.get('timeOnIce'))})
+            if games:
+                break
+        if not games:
+            return None
+        games.sort(key=lambda item: item['date'], reverse=True)
+
+        def summary(sample):
+            minutes = [g['toi'] for g in sample if g['toi'] is not None]
+            return {'games': len(sample), 'goals': sum(g['goals'] for g in sample),
+                    'shots': sum(g['shots'] for g in sample),
+                    'toi_game': round(sum(minutes) / len(minutes), 2) if minutes else None,
+                    'shots_on_target_game': round(sum(g['shots'] for g in sample) / len(sample), 2)}
+
+        return str(pid), {'name': name, 'team': club, 'sport': 'NHL',
+                          'source': 'NHL API / player game-log', 'updated_at': now.isoformat(),
+                          'season': summary(games), 'last20': summary(games[:20]),
+                          'last5': summary(games[:5]), 'games': games[:20],
+                          'ixg60': None, 'pp_toi_game': None, 'pp1': None}
+
+    result = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        for item in pool.map(collect, players.values()):
+            if item:
+                result[item[0]] = item[1]
+    print('NHL player records fetched:', len(result))
+    if not result:
+        print('WARN: Keine NHL-Spielerlogs abrufbar; bisherige Daten bleiben erhalten.')
+        return
+
+    # Preserve previous records not included in today's fixtures and avoid data loss.
+    if OUT.exists():
+        try:
+            previous = json.loads(OUT.read_text(encoding='utf-8'))
+            previous_nhl = previous.get('nhl', {})
+            if isinstance(previous_nhl, dict):
+                result = {**previous_nhl, **result}
+        except (OSError, ValueError) as exc:
+            print('WARN: Bisherige Spielerdatei nicht lesbar:', exc)
+
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    temporary = OUT.with_suffix('.json.tmp')
+    temporary.write_text(json.dumps({'updated_at': now.isoformat(), 'nhl': result,
+                                     'source': 'NHL API'}, ensure_ascii=False,
+                                    separators=(',', ':')), encoding='utf-8')
+    temporary.replace(OUT)
+    print('NHL player records saved:', len(result), 'file:', OUT)
+
+
+if __name__ == '__main__':
+    main()
