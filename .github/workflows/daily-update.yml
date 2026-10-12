@@ -1,3 +1,4 @@
+
 name: SportRadar Tagesupdate
 
 on:
@@ -8,27 +9,41 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: sportradar-daily-update
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Pakete installieren
         run: pip install -r requirements.txt
-      - name: Sportdaten aktualisieren
+
+      - name: Spielpläne aktualisieren
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
           DEL_LEAGUE_ID: ${{ secrets.DEL_LEAGUE_ID }}
         run: python daily_update.py
-      - name: Aktualisierte Daten speichern
+
+      - name: Spielerstatistiken aktualisieren
+        run: python daily_player_update.py
+
+      - name: xG und ixG aktualisieren
+        run: python advanced_stats_update.py
+
+      - name: Daten speichern
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
           if ! git diff --cached --quiet; then
-            git commit -m 'Automatisches Sportdaten-Update'
+            git commit -m "SportRadar: tägliche Daten aktualisiert"
             git push
           fi
