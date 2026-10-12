@@ -268,6 +268,35 @@ def nhl_own_form_grade(stats):
 
 st.markdown("<style>.sr-data-note{font-size:.74rem;color:#acc5d8;margin-top:8px;line-height:1.45}.sr-pred-chips{display:flex;flex-wrap:wrap;gap:3px}</style>",unsafe_allow_html=True)
 
+st.markdown("""<style>
+.sr-metric-highlights{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}
+.sr-metric-highlight{background:#e7f3ff;color:#092e58;border:2px solid #42b9ff;border-radius:12px;padding:8px 12px;flex:1 1 130px;min-width:0}
+.sr-metric-highlight.ice{background:#dcfff3;border-color:#29d3a1;color:#075443}
+.sr-metric-highlight.missing{background:#e9eef5;border-color:#8193aa;color:#304259}
+.sr-metric-highlight small{display:block;font-size:.76rem;font-weight:750;letter-spacing:.02em}
+.sr-metric-highlight strong{display:block;font-size:1.12rem;font-weight:900;margin-top:3px}
+</style>""",unsafe_allow_html=True)
+
+def spotlight_metrics(player, sport, form=None):
+    """Emphasize only real supplied metrics; never substitute invented xG or ice time."""
+    def tile(label,value,kind='',missing=False):
+        cls='sr-metric-highlight '+('missing' if missing else kind)
+        return f'<div class="{cls}"><small>{html.escape(label)}</small><strong>{html.escape(value)}</strong></div>'
+    blocks=[]
+    if sport=='football':
+        xg=player.get('xg')
+        blocks.append(tile('⚽ Expected Goals (xG)',f'{xg:.2f}'.replace('.',',') if isinstance(xg,(int,float)) else 'Nicht verfügbar',missing=not isinstance(xg,(int,float))))
+    else:
+        minutes=None
+        if form and form.get('played') and isinstance(form.get('minutes'),(int,float)):
+            minutes=form['minutes']/form['played']
+        elif isinstance(player.get('minutes'),(int,float)):
+            minutes=player['minutes']
+        blocks.append(tile('🏒 Ø Eiszeit / Spiel',f'{minutes:.1f} Min.'.replace('.',',') if minutes is not None else 'Nicht verfügbar','ice',minutes is None))
+        pp=player.get('powerplay_minutes')
+        blocks.append(tile('⚡ Ø Powerplay-Eiszeit',f'{pp:.1f} Min.'.replace('.',',') if isinstance(pp,(int,float)) else 'Nicht verfügbar','ice',not isinstance(pp,(int,float))))
+    return '<div class="sr-metric-highlights">'+''.join(blocks)+'</div>'
+
 def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
     tier=probability_tier(player.get("p"),sport)
     name=html.escape(str(player["name"])); team=html.escape(str(player["team"]))
@@ -312,6 +341,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     else:
         data_notes.append("PP1/Powerplay-Eiszeit nur bei vorhandenen Daten")
     notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
+    highlights_html=spotlight_metrics(player,sport,form_stats)
     portrait=safe_logo(player.get("photo"))
     if not portrait and sport=="football" and player.get("player_id"):
         portrait=f'https://media.api-sports.io/football/players/{player["player_id"]}.png'
@@ -325,7 +355,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     grade_text=f'{grade_value:.1f}'.replace('.',',') if grade_value is not None else '–'
     grade_color=("green" if grade_value is not None and grade_value>=8 else "yellow" if grade_value is not None and grade_value>=6 else "red" if grade_value is not None else "unknown")
     league_text=html.escape(str(player.get("league") or ("NHL" if sport=="nhl" else "DEL" if sport=="del" else "Fußball")))
-    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{form_html}{notes_html}</div>''',unsafe_allow_html=True)
+    st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div>{highlights_html}{form_html}{notes_html}</div>''',unsafe_allow_html=True)
 
 
 def show_players(players,period_label,sport="hockey"):
@@ -1324,6 +1354,7 @@ def render_form_combo(picks, view_key="default"):
         st.markdown(f'<div class="sr-combo-probs"><div><small>{period_name}</small><strong>{pct(period_value)}</strong></div><div><small>Gesamtspiel</small><strong>{pct(p["adjusted_p"])}</strong></div></div>',unsafe_allow_html=True)
         st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
+        st.markdown(spotlight_metrics(p, p["sport"], form), unsafe_allow_html=True)
         st.caption("📊 Auswahlfaktoren: " + combo_evidence_caption(p,form))
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
