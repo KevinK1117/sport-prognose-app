@@ -266,12 +266,12 @@ def nhl_own_form_grade(stats):
 st.markdown("<style>.sr-data-note{font-size:.74rem;color:#acc5d8;margin-top:8px;line-height:1.45}.sr-pred-chips{display:flex;flex-wrap:wrap;gap:3px}</style>",unsafe_allow_html=True)
 
 st.markdown("""<style>
-.sr-metric-highlights{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}
-.sr-metric-highlight{background:#e7f3ff;color:#092e58;border:2px solid #42b9ff;border-radius:12px;padding:8px 12px;flex:1 1 130px;min-width:0}
+.sr-metric-highlights{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 15px}
+.sr-metric-highlight{background:#e7f3ff;color:#092e58;border:2px solid #42b9ff;border-radius:12px;padding:14px 14px;flex:1 1 155px;min-width:0}
 .sr-metric-highlight.ice{background:#dcfff3;border-color:#29d3a1;color:#075443}
 .sr-metric-highlight.missing{background:#e9eef5;border-color:#8193aa;color:#304259}
 .sr-metric-highlight small{display:block;font-size:.76rem;font-weight:750;letter-spacing:.02em}
-.sr-metric-highlight strong{display:block;font-size:1.12rem;font-weight:900;margin-top:3px}
+.sr-metric-highlight strong{display:block;font-size:1.25rem;font-weight:900;margin-top:6px}
 </style>""",unsafe_allow_html=True)
 
 def spotlight_metrics(player, sport, form=None):
@@ -299,7 +299,7 @@ def spotlight_metrics(player, sport, form=None):
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',',')))
             if v2.get('penalty_taker')==1: blocks.append(tile('🎯 Elfmeter','Bestätigt'))
         else:
-            for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Chancen / Spiel'),('goalie_factor','Starting-Goalie-Faktor')]:
+            for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Schüsse / Spiel'),('goalie_factor','Starting-Goalie-Faktor')]:
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',','),'ice'))
             if v2.get('pp1')==1: blocks.append(tile('⚡ Powerplay','PP1 bestätigt','ice'))
             elif v2.get('pp1')==0: blocks.append(tile('⚡ Powerplay','Nicht PP1','ice'))
@@ -374,6 +374,41 @@ def _football_csv_prediction(player):
     return output
 
 
+@st.cache_data(ttl=300,show_spinner=False)
+def _nhl_advanced_csv():
+    import csv
+    path=Path(__file__).resolve().parent/'data'/'advanced_player_metrics.csv'
+    try:
+        with path.open(encoding='utf-8-sig',newline='') as f:
+            return [r for r in csv.DictReader(f) if r.get('sport')=='NHL' and r.get('sample')=='season']
+    except (OSError,ValueError):
+        return []
+
+
+def _nhl_metrics_overlay(player):
+    if str(player.get('league','')).upper()!='NHL' and str(player.get('sport','')).lower() not in ('nhl','hockey'):
+        return player
+    import unicodedata
+    def norm(x):
+        return ''.join(c for c in unicodedata.normalize('NFKD',str(x or '').casefold()) if c.isalnum() and not unicodedata.combining(c))
+    name=norm(player.get('name'));team=norm(player.get('team'))
+    matches=[r for r in _nhl_advanced_csv() if norm(r.get('name'))==name and norm(r.get('team'))==team]
+    if len(matches)!=1:return player
+    r=matches[0]
+    try:
+        if r.get('as_of') and player.get('kickoff') and r['as_of']>str(player['kickoff'])[:10]:return player
+    except (TypeError,ValueError):return player
+    out=dict(player);m=dict(out.get('v2_metrics') or {})
+    for k in ('ixg60','toi_game','shots_on_target_game','attempts_game','pp_toi_game','high_danger_game'):
+        try:
+            v=float(r[k]);
+            if math.isfinite(v) and v>=0:m[k]=v
+        except (TypeError,ValueError,KeyError):pass
+    out['v2_metrics']=m
+    if isinstance(m.get('pp_toi_game'),(int,float)):out['powerplay_minutes']=m['pp_toi_game']
+    return out
+
+
 def enriched_player(player):
     """Use verified SportRadar v2 next/season metrics when available; otherwise retain legacy model."""
     if player.get('sport')=='football' or (player.get('sport') is None and player.get('team_id') is not None):
@@ -382,9 +417,9 @@ def enriched_player(player):
             return enriched
     try:
         from sport_database import match_prediction
-        return match_prediction(player)
+        return _nhl_metrics_overlay(match_prediction(player))
     except (ImportError, OSError, ValueError):
-        return player
+        return _nhl_metrics_overlay(player)
 
 
 def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
@@ -430,7 +465,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
         if player.get("xg") is None: data_notes.append("xG nicht verfügbar")
         data_notes.append("Startelf/Verletzungen nur bei bestätigter Datenlage")
     else:
-        data_notes.append("PP1, Powerplay-Eiszeit und Starting Goalie nur bei bestätigten Daten; Powerplay-Tore sind kein PP1-Nachweis")
+        data_notes.append("PP1 und Starting Goalie nur bei bestätigten Daten; PP-Eiszeit und High-Danger-Schüsse aus MoneyPuck, sofern verfügbar")
     notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
     highlights_html=spotlight_metrics(player,sport,form_stats)
     if sport=='nhl':
