@@ -430,7 +430,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
         if player.get("xg") is None: data_notes.append("xG nicht verfügbar")
         data_notes.append("Startelf/Verletzungen nur bei bestätigter Datenlage")
     else:
-        data_notes.append("PP1/Powerplay-Eiszeit nur bei vorhandenen Daten")
+        data_notes.append("PP1, Powerplay-Eiszeit und Starting Goalie nur bei bestätigten Daten; Powerplay-Tore sind kein PP1-Nachweis")
     notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
     highlights_html=spotlight_metrics(player,sport,form_stats)
     if sport=='nhl':
@@ -443,6 +443,8 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
                 parts=[f"Letzte {sample['games']} Spiele: {sample.get('goals',0)} Tore"]
                 if shots is not None:parts.append(f"{shots:.1f} Schüsse aufs Tor/Spiel")
                 if ice is not None:parts.append(f"Ø Eiszeit {ice:.1f} Min")
+                if sample.get('pp_goals') is not None:
+                    parts.append(f"{sample['pp_goals']} Powerplay-Tore ({sample.get('pp_goals_games_reported',0)} Spiele mit Angaben)")
                 highlights_html+='<div class="sr-daily-evidence">📅 <b>Täglich aktualisierte NHL-Statistik</b><br>'+html.escape(' · '.join(parts))+'</div>'
 
     portrait=safe_logo(player.get("photo"))
@@ -1309,6 +1311,15 @@ def combo_evidence_score(player, stats):
         pp_toi=metrics.get('pp_toi_game')
         if isinstance(pp_toi,(int,float)) and math.isfinite(pp_toi) and pp_toi>=0:
             score+=min(7.0,pp_toi)*1.5
+        # Official NHL player game logs can contain power-play goals, not
+        # verified PP1 assignment or PP ice time. Use as a modest evidence
+        # signal only; do not infer PP1 or power-play minutes from goals.
+        evidence=daily_player_evidence(player) if player.get('sport')=='hockey' or player.get('league')=='NHL' else None
+        sample=(evidence or {}).get('last20') or {}
+        reported=sample.get('pp_goals_games_reported') or 0
+        pp_goals=sample.get('pp_goals')
+        if reported>=3 and isinstance(pp_goals,(int,float)) and pp_goals>=0:
+            score+=min(3.0,pp_goals/reported)*6.0
     # Modest recent-goal signal, so small samples do not dominate xG/shots.
     score+=min(1.0,max(0.0,float(stats.get("goals") or 0)/n))*5.0
     opponent=metrics.get("opponent_factor")
