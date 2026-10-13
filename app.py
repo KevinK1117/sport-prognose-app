@@ -209,7 +209,7 @@ def del_form_snapshot():
 def del_recent_form(player,day):
     key=normalize_team(player.get('name',''))
     info=del_form_snapshot().get(key,{})
-    recent=[g for g in info.get('games',[]) if g.get('date','')<day.isoformat()][:5]
+    recent=[g for g in info.get('games',[]) if g.get('date','')<day.isoformat()][:20]
     if len(recent)<3: return None
     return {'played':len(recent),'goals':sum(g['goals'] for g in recent),
             'shots':sum(g['shots'] for g in recent),
@@ -218,7 +218,7 @@ def del_recent_form(player,day):
 
 
 def player_form_details(player, sport, day):
-    """Verified last-five-game form; return None if unsupported/unavailable."""
+    """Verified form from up to 20 recent appearances; no fabricated matches."""
     if sport == "football":
         key = secret("API_SPORTS_KEY")
         if not key or not player.get("team_id") or not player.get("player_id"):
@@ -435,7 +435,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     if sport=='nhl':
         evidence=daily_player_evidence(player)
         if evidence:
-            sample=evidence.get('last5') or {}
+            sample=evidence.get('last20') or evidence.get('last10') or evidence.get('last5') or {}
             if sample.get('games'):
                 shots=sample.get('shots_on_target_game')
                 ice=sample.get('toi_game')
@@ -1141,8 +1141,8 @@ def combo_candidates(day, sport, league):
 
 @st.cache_data(ttl=7200,show_spinner=False)
 def football_recent_fixture_ids(team_id, day, key):
-    """Last five completed fixtures before the chosen day, all competitions."""
-    rows=api("fixtures",{"team":team_id,"last":12,"status":"FT","timezone":"Europe/Berlin"},key=key)
+    """Up to 20 completed fixtures before the chosen day, all competitions."""
+    rows=api("fixtures",{"team":team_id,"last":35,"status":"FT","timezone":"Europe/Berlin"},key=key)
     if not isinstance(rows,list): return []
     found=[]
     for row in rows:
@@ -1152,7 +1152,7 @@ def football_recent_fixture_ids(team_id, day, key):
         except ValueError: continue
         if played<day and fixture.get("id"):
             found.append((played,fixture["id"]))
-    return [fid for _,fid in sorted(found,reverse=True)[:5]]
+    return [fid for _,fid in sorted(found,reverse=True)[:20]]
 
 
 @st.cache_data(ttl=7200,show_spinner=False)
@@ -1222,7 +1222,7 @@ def nhl_recent_form(player_id,day):
         try: played=datetime.fromisoformat(str(game.get("gameDate",""))[:10]).date()
         except ValueError: continue
         if played<day: recent.append(game)
-    recent=sorted(recent,key=lambda row:row.get("gameDate", ""),reverse=True)[:5]
+    recent=sorted(recent,key=lambda row:row.get("gameDate", ""),reverse=True)[:20]
     if len(recent)<3: return None
     return {"played":len(recent),"goals":sum(int(g.get("goals") or 0) for g in recent),"shots":sum(int(g.get("shots") or 0) for g in recent),"minutes":sum(parse_toi(g.get("toi") or g.get("timeOnIce")) for g in recent)}
 
@@ -1251,7 +1251,7 @@ def adjusted_goal_probability(player, stats):
     n=stats["played"]
     season_rate=player.get("goals",0)/max(1,player.get("games",1))
     recent_rate=stats.get("goals",0)/n
-    # Shrink noisy five-game goal trends toward the season rate.
+    # Shrink noisy recent-game goal trends toward the season rate.
     goal_factor=max(.75,min(1.25,(recent_rate+.25)/(season_rate+.25)))
     minutes=stats.get("minutes") or 0
     if player["sport"]=="football":
@@ -1342,7 +1342,7 @@ def combo_evidence_caption(player, form):
 
 
 def combo_preselection_bonus(player):
-    """Allow strong verified chance creators into each team's five-player shortlist."""
+    """Allow strong verified chance creators into each team's player shortlist."""
     m=player.get("v2_metrics") or {}
     key="xg90" if player.get("sport")=="football" else "ixg60"
     x=m.get(key)
@@ -1362,7 +1362,7 @@ def rank_candidates_by_verified_form(pool,day):
     football_forms={}
     evaluated=[]
     for team_key,players in teams.items():
-        for player in sorted(players,key=lambda p:(p.get("p") or 0) + combo_preselection_bonus(p),reverse=True)[:5]:
+        for player in sorted(players,key=lambda p:(p.get("p") or 0) + combo_preselection_bonus(p),reverse=True)[:12]:
             if player["sport"]=="football":
                 team_id=player.get("team_id")
                 if not team_id or not player.get("player_id"): continue
@@ -1537,7 +1537,7 @@ def combo_view(day,sport,league):
         mode="football" if sport_mode.startswith("⚽") else "hockey"
         amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=7,key="daily_all_leagues_amount")
         st.caption(f"{day.strftime('%d.%m.%Y')} · Alle Ligen der gewählten Sportart · Torschütze im Gesamtspiel")
-        st.caption("Nur grüne Kandidaten mit überprüfbarer Form aus bis zu fünf Einsätzen; maximal zwei Tipps pro Begegnung.")
+        st.caption("Nur grüne Kandidaten mit überprüfbarer Form aus bis zu 20 Einsätzen; maximal zwei Tipps pro Begegnung.")
         request=(str(day),mode)
         if st.button("📅 Form-Tages-Kombi berechnen",key=f"daily_all_{day}"):
             st.session_state["daily_all_request"]=request
@@ -1549,7 +1549,7 @@ def combo_view(day,sport,league):
             render_form_combo(ranked[:amount], "daily")
     with tab_all:
         st.caption(f"{day.strftime('%d.%m.%Y')} · Alle geeigneten Begegnungen · Höchste grüne Torprognose aus den Top 5 jeder Mannschaft")
-        st.caption("Bewertet werden echte letzte fünf Einsätze inklusive Tore, Schüsse und Spielzeit/Eiszeit. Nur grüne Tipps; maximal zwei je Begegnung.")
+        st.caption("Bewertet werden echte letzte bis zu 20 Einsätze inklusive Tore, Schüsse und Spielzeit/Eiszeit. Nur grüne Tipps; maximal zwei je Begegnung.")
         st.caption("DEL wird berücksichtigt, sobald der tägliche DEL-Formdaten-Abruf erfolgreich war.")
         if st.button("🔥 Große Form-Kombi für diesen Tag berechnen",key=f"form_{day}"):
             st.session_state["form_day"]=str(day)
@@ -1567,7 +1567,7 @@ def combo_view(day,sport,league):
         if st.button("⚽🏒 Mixed Tages-Kombi berechnen",key=f"mixed_day_{day}"):
             st.session_state["mixed_form_day"]=str(day)
         if st.session_state.get("mixed_form_day")==str(day):
-            with st.spinner("Alle 9 Ligen und die letzten fünf Einsätze prüfen …"):
+            with st.spinner("Alle 9 Ligen und die letzten bis zu 20 Einsätze prüfen …"):
                 ranked=multi_league_form_combo(day,"mixed")
             if len(ranked)<mixed_amount:
                 st.warning(f"Nur {len(ranked)} geeignete grüne Tipps verfügbar; keine Tipps werden ergänzt.")
