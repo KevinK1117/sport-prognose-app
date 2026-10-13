@@ -122,8 +122,15 @@ def main():
                     shots = int(game.get('shots') or 0)
                 except (ValueError, TypeError):
                     continue
-                games.append({'date': date, 'goals': goals, 'shots': shots,
-                              'toi': toi(game.get('toi') or game.get('timeOnIce'))})
+                record = {'date': date, 'goals': goals, 'shots': shots,
+                          'toi': toi(game.get('toi') or game.get('timeOnIce'))}
+                # NHL game-log fields vary by season. Only store PP goals when
+                # the official response explicitly supplies the value.
+                pp_goals = game.get('powerPlayGoals')
+                if pp_goals is not None:
+                    try: record['pp_goals'] = max(0, int(pp_goals))
+                    except (TypeError, ValueError): pass
+                games.append(record)
             if games:
                 break
         if not games:
@@ -135,7 +142,9 @@ def main():
             return {'games': len(sample), 'goals': sum(g['goals'] for g in sample),
                     'shots': sum(g['shots'] for g in sample),
                     'toi_game': round(sum(minutes) / len(minutes), 2) if minutes else None,
-                    'shots_on_target_game': round(sum(g['shots'] for g in sample) / len(sample), 2)}
+                    'shots_on_target_game': round(sum(g['shots'] for g in sample) / len(sample), 2),
+                    'pp_goals': sum(g['pp_goals'] for g in sample if 'pp_goals' in g) if any('pp_goals' in g for g in sample) else None,
+                    'pp_goals_games_reported': sum('pp_goals' in g for g in sample)}
 
         return str(pid), {'name': name, 'team': club, 'sport': 'NHL',
                           'source': 'NHL API / player game-log', 'updated_at': now.isoformat(),
