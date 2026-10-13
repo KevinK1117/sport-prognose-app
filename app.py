@@ -305,7 +305,9 @@ def spotlight_metrics(player, sport, form=None):
             elif v2.get('pp1')==0: blocks.append(tile('⚡ Powerplay','Nicht PP1','ice'))
     if player.get('v2_model'):
         opponent=(player.get('v2_metrics') or {}).get('opponent_factor')
-        if isinstance(opponent,(int,float)):blocks.append(tile('Gegnerfaktor',f'{opponent:.2f}'.replace('.',',')))
+        if isinstance(opponent,(int,float)):blocks.append(tile('Gegnerstärke (xGA-Faktor)',f'{opponent:.2f}'.replace('.',',')))
+        starter=(player.get('v2_metrics') or {}).get('starting_goalie_name')
+        if starter:blocks.append(tile('🥅 Bestätigter Gegner-Torwart',str(starter)))
     return '<div class="sr-metric-highlights">'+''.join(blocks)+'</div>'
 
 @st.cache_data(ttl=120,show_spinner=False)
@@ -385,6 +387,41 @@ def _nhl_advanced_csv():
         return []
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _nhl_matchup_data():
+    path = Path(__file__).resolve().parent / 'data' / 'nhl_matchups.json'
+    try:
+        return json.loads(path.read_text(encoding='utf-8')).get('games', {})
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def _nhl_matchup_overlay(player):
+    if str(player.get('league', '')).upper() != 'NHL' and str(player.get('sport', '')).lower() not in ('nhl', 'hockey'):
+        return player
+    fixture = str(player.get('fixture') or '')
+    team = str(player.get('team') or '').upper()
+    game = _nhl_matchup_data().get(fixture)
+    if not isinstance(game, dict):
+        return player
+    if team == game.get('home'):
+        factor = game.get('home_opponent_factor')
+        goalie = (game.get('confirmed_starters') or {}).get('awayTeam')
+    elif team == game.get('away'):
+        factor = game.get('away_opponent_factor')
+        goalie = (game.get('confirmed_starters') or {}).get('homeTeam')
+    else:
+        return player
+    out = dict(player)
+    metrics = dict(out.get('v2_metrics') or {})
+    if isinstance(factor, (int, float)) and math.isfinite(factor) and .8 <= factor <= 1.2:
+        metrics['opponent_factor'] = factor
+    if isinstance(goalie, dict) and goalie.get('confirmed') and goalie.get('name'):
+        metrics['starting_goalie_name'] = goalie['name']
+    out['v2_metrics'] = metrics
+    return out
+
+
 def _nhl_metrics_overlay(player):
     if str(player.get('league','')).upper()!='NHL' and str(player.get('sport','')).lower() not in ('nhl','hockey'):
         return player
@@ -417,9 +454,9 @@ def enriched_player(player):
             return enriched
     try:
         from sport_database import match_prediction
-        return _nhl_metrics_overlay(match_prediction(player))
+        return _nhl_matchup_overlay(_nhl_metrics_overlay(match_prediction(player)))
     except (ImportError, OSError, ValueError):
-        return _nhl_metrics_overlay(player)
+        return _nhl_matchup_overlay(_nhl_metrics_overlay(player))
 
 
 def show_player(player,period_label,sport="hockey",form_stats=None,show_form=False):
@@ -622,6 +659,10 @@ def nhl_view(day):
             ap=nhl_skaters(away.get("abbrev")) if away.get("abbrev") else None
             if hp is None or ap is None: st.warning("NHL-Spielerstatistiken nicht vollständig verfügbar."); continue
             hockey_lineup_panel(home_name,hp,away_name,ap,f"nhl_{day}")
+            # Pass matchup identity to each skater for verified opponent and goalie context.
+            game_key=str(game.get('id') or f'{home.get("abbrev")}-{away.get("abbrev")}')
+            hp=[{**p,'fixture':game_key,'league':'NHL','sport':'hockey'} for p in hp]
+            ap=[{**p,'fixture':game_key,'league':'NHL','sport':'hockey'} for p in ap]
             show_match_teams(home_name,home.get("logo"),hp,away_name,away.get("logo"),ap,"1. Drittel",f'nhl_{day}_{game.get("id",str(home.get("abbrev"))+str(away.get("abbrev")))}',sport="nhl")
 
 
@@ -1395,6 +1436,8 @@ def combo_evidence_caption(player, form):
         if isinstance(high,(int,float)): labels.append(f"High-Danger/Spiel {high:.2f}")
         goalie=(player.get("v2_metrics") or {}).get("goalie_factor")
         if isinstance(goalie,(int,float)) and goalie>0: labels.append(f"Goalie-Faktor {goalie:.2f}")
+        starter=(player.get('v2_metrics') or {}).get('starting_goalie_name')
+        if starter: labels.append(f'Bestätigter Starting Goalie: {starter}')
     metrics=player.get("v2_metrics") or {}
     xg=metrics.get("npxg90") if player.get("sport")=="football" else metrics.get("ixg60")
     if not isinstance(xg,(int,float)):

@@ -183,3 +183,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+    try:
+        from nhl_matchup_update import main as update_nhl_matchups
+        update_nhl_matchups()
+    except (ImportError, OSError, ValueError) as exc:
+        print('WARN NHL matchup update:', type(exc).__name__)
