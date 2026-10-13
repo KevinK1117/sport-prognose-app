@@ -18,6 +18,9 @@ LEAGUES = {
     "Premier League": 39,
     "Ligue 1": 61,
     "MLS": 253,
+    "Champions League": 2,
+    "Europa League": 3,
+    "Saudi Pro League": 307,
 }
 KEY = os.environ.get("API_SPORTS_KEY", "").strip()
 DEL_ID = os.environ.get("DEL_LEAGUE_ID", "").strip()
