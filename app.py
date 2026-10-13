@@ -299,9 +299,10 @@ def spotlight_metrics(player, sport, form=None):
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',',')))
             if v2.get('penalty_taker')==1: blocks.append(tile('🎯 Elfmeter','Bestätigt'))
         else:
-            for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Chancen / Spiel')]:
+            for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Chancen / Spiel'),('goalie_factor','Starting-Goalie-Faktor')]:
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',','),'ice'))
             if v2.get('pp1')==1: blocks.append(tile('⚡ Powerplay','PP1 bestätigt','ice'))
+            elif v2.get('pp1')==0: blocks.append(tile('⚡ Powerplay','Nicht PP1','ice'))
     if player.get('v2_model'):
         opponent=(player.get('v2_metrics') or {}).get('opponent_factor')
         if isinstance(opponent,(int,float)):blocks.append(tile('Gegnerfaktor',f'{opponent:.2f}'.replace('.',',')))
@@ -1300,13 +1301,28 @@ def combo_evidence_score(player, stats):
         score+=min(25.0,minutes)/25.0*9.0
         pp=player.get("powerplay_minutes")
         if isinstance(pp,(int,float)) and pp>=0: score+=min(6.0,pp)*1.5
-        if player.get("pp1") is True: score+=3.0
+        pp1=metrics.get('pp1',player.get('pp1'))
+        if pp1 is True or pp1==1: score+=4.0
+        high_danger=metrics.get('high_danger_game')
+        if isinstance(high_danger,(int,float)) and math.isfinite(high_danger) and high_danger>=0:
+            score+=min(5.0,high_danger)*3.0
+        pp_toi=metrics.get('pp_toi_game')
+        if isinstance(pp_toi,(int,float)) and math.isfinite(pp_toi) and pp_toi>=0:
+            score+=min(7.0,pp_toi)*1.5
     # Modest recent-goal signal, so small samples do not dominate xG/shots.
     score+=min(1.0,max(0.0,float(stats.get("goals") or 0)/n))*5.0
     opponent=metrics.get("opponent_factor")
     if isinstance(opponent,(int,float)) and math.isfinite(opponent) and opponent>0:
         score*=max(.8,min(1.2,opponent))
+    goalie=metrics.get('goalie_factor')
+    if isinstance(goalie,(int,float)) and math.isfinite(goalie) and goalie>0:
+        score*=max(.85,min(1.15,goalie))
     return round(score,3)
+
+
+def metrics_pp1(player):
+    metrics=player.get('v2_metrics') or {}
+    return metrics.get('pp1',player.get('pp1'))
 
 
 def combo_evidence_caption(player, form):
@@ -1327,8 +1343,12 @@ def combo_evidence_caption(player, form):
             labels.append(f"Ø {player['powerplay_minutes']:.1f} Min. Powerplay")
         else:
             labels.append("Powerplay-Eiszeit: keine Daten")
-        if player.get("pp1") is True:
+        if metrics_pp1(player)==1:
             labels.append("PP1: bestätigt")
+        high=(player.get("v2_metrics") or {}).get("high_danger_game")
+        if isinstance(high,(int,float)): labels.append(f"High-Danger/Spiel {high:.2f}")
+        goalie=(player.get("v2_metrics") or {}).get("goalie_factor")
+        if isinstance(goalie,(int,float)) and goalie>0: labels.append(f"Goalie-Faktor {goalie:.2f}")
     metrics=player.get("v2_metrics") or {}
     xg=metrics.get("npxg90") if player.get("sport")=="football" else metrics.get("ixg60")
     if not isinstance(xg,(int,float)):
@@ -1500,7 +1520,7 @@ def render_form_combo(picks, view_key="default"):
     if len(picks)>1:
         chance=100*math.prod(p["adjusted_p"]/100 for p in picks)
         st.metric("Rechnerische Kombi-Chance (heuristisch)",pct(chance))
-    st.warning("Auswahl nach Tor-Modell, xG/ixG (falls vorhanden), Schüssen, aktueller Form und Einsatzzeit; Gegnerfaktor nur bei vorhandenen Daten. Grün ist keine Wettempfehlung. Die rechnerische Kombi-Chance nimmt Unabhängigkeit an und ist nicht kalibriert.")
+    st.warning("Auswahl nach Tor-Modell, xG/ixG, Schüssen, letzter Form und Einsatzzeit; PP1, High-Danger-Chancen, Gegner- und Starting-Goalie-Faktor nur bei verifizierten Daten. Grün ist keine Wettempfehlung. Die rechnerische Kombi-Chance nimmt Unabhängigkeit an und ist nicht kalibriert.")
 
 
 def render_combo_picks(picks,requested):
