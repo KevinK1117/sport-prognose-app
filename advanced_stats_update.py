@@ -56,19 +56,29 @@ def nhl():
         if len(r.content)>40_000_000:raise ValueError('File too large')
         reader=csv.DictReader(io.StringIO(r.content.decode('utf-8-sig')))
         if not reader.fieldnames or 'playerId' not in reader.fieldnames:raise ValueError('Unexpected MoneyPuck columns')
-        # Prefer all-situations for matching time and xG, do not mix PP and EV denominators.
+        # Situation-specific PP time must come from 5on4 rows, not all-situations.
+        source_rows=list(reader)
+        pp_by_id={}
+        for r in source_rows:
+            if str(r.get('situation','')).lower() in ('5on4','5v4','pp'):
+                pid=str(r.get('playerId') or '')
+                pp_sec=num(r.get('icetime'))
+                if pid and pp_sec is not None and pp_sec>=0:
+                    pp_by_id[pid]=pp_sec
         rows=[]
-        for p in reader:
+        for p in source_rows:
             if p.get('situation') not in ('all','allSituations'):continue
             name=p.get('name') or p.get('playerName');pid=p.get('playerId')
             team=p.get('team') or p.get('teamCode')
-            ice=num(p.get('icetime')) # MoneyPuck documents icetime in seconds.
+            ice=num(p.get('icetime'))
             games=num(p.get('games_played') or p.get('gamesPlayed'))
             xg=num(p.get('I_F_xGoals') or p.get('I_F_xGoals_with_earned_rebounds'))
             shots=num(p.get('I_F_shotsOnGoal'))
             attempts=num(p.get('I_F_shotAttempts'))
+            danger=num(p.get('I_F_highDangerShots'))
             if not all((name,pid,team,ice,games)) or xg is None or ice<=0 or games<=0:continue
-            rows.append({'player_id':'moneypuck:'+str(pid),'name':name,'sport':'NHL','team':team,'as_of':TODAY,'sample':'season','ixg60':round(xg*3600/ice,5),'toi_game':round(ice/60/games,3),'shots_on_target_game':round(shots/games,3) if shots is not None else None,'attempts_game':round(attempts/games,3) if attempts is not None else None,'source':'MoneyPuck / '+url})
+            pp_seconds=pp_by_id.get(str(pid))
+            rows.append({'player_id':'moneypuck:'+str(pid),'name':name,'sport':'NHL','team':team,'as_of':TODAY,'sample':'season','ixg60':round(xg*3600/ice,5),'toi_game':round(ice/60/games,3),'shots_on_target_game':round(shots/games,3) if shots is not None else None,'attempts_game':round(attempts/games,3) if attempts is not None else None,'pp_toi_game':round(pp_seconds/60/games,3) if pp_seconds is not None else None,'high_danger_game':round(danger/games,3) if danger is not None else None,'source':'MoneyPuck / '+url})
         print('MoneyPuck players:',len(rows));return rows
     except (requests.RequestException,UnicodeError,ValueError) as exc:
         print('MoneyPuck unavailable:',type(exc).__name__);return []
