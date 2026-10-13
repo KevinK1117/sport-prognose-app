@@ -297,7 +297,22 @@ def spotlight_metrics(player, sport, form=None):
         if sport=='football':
             for field,label in [('npxg90','Non-Penalty xG / 90'),('shots90','Schüsse / 90'),('shots_in_box90','Strafraum-Schüsse / 90'),('shots_on_target90','Schüsse aufs Tor / 90'),('expected_minutes','Erwartete Spielminuten'),('team_xg','Team-xG (Prognose)')]:
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',',')))
-            if v2.get('penalty_taker')==1: blocks.append(tile('🎯 Elfmeter','Bestätigt'))
+            # Transparent football scorer criteria, each in its own visible tile.
+            opponent=v2.get('opponent_factor')
+            blocks.append(tile('🛡️ Gegnerstärke / xGA', f'{opponent:.2f}'.replace('.',',') if isinstance(opponent,(int,float)) else 'Keine verifizierten Daten', missing=not isinstance(opponent,(int,float))))
+            penalty=v2.get('penalty_taker',player.get('penalty_taker'))
+            blocks.append(tile('🎯 Elfmeterschütze','Bestätigt' if penalty is True or penalty==1 else 'Nicht bestätigt',missing=not (penalty is True or penalty==1)))
+            if isinstance(v2.get('opponent_xga'),(int,float)): blocks.append(tile('🛡️ Gegner xGA / Spiel',f"{v2['opponent_xga']:.2f}".replace('.',',')))
+            if isinstance(v2.get('team_xga'),(int,float)): blocks.append(tile('🛡️ Team xGA / Spiel',f"{v2['team_xga']:.2f}".replace('.',',')))
+            if isinstance(v2.get('penalties_scored_season'),(int,float)): blocks.append(tile('🎯 Elfmeter verwandelt (Saison)',str(int(v2['penalties_scored_season']))+' · Schütze nicht bestätigt'))
+            team_xg=v2.get('team_xg')
+            if team_xg is None: blocks.append(tile('⚽ Team-Offensive / xG','Keine verifizierten Daten',missing=True))
+            if form and form.get('played'):
+                n=form['played']
+                blocks.append(tile(f'🔥 Form letzte {n} Spiele',f"{form.get('goals',0)} Tore · {form.get('shots',0)} Schüsse"))
+                weighted=form.get('weighted_shots_game')
+                if isinstance(weighted,(int,float)):
+                    blocks.append(tile('📈 Schüsse / Spiel (gewichtet)',f'{weighted:.2f}'.replace('.',',')))
         else:
             for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Schüsse / Spiel'),('goalie_factor','Starting-Goalie-Faktor')]:
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',','),'ice'))
@@ -324,6 +339,62 @@ def daily_player_evidence(player):
     if not entry:return None
     if normalize_team(entry.get('team'))!=normalize_team(player.get('team')):return None
     return entry
+
+@st.cache_data(ttl=300,show_spinner=False)
+def _football_context():
+    path=Path(__file__).resolve().parent/'data'/'football_context.json'
+    try:return json.loads(path.read_text(encoding='utf-8'))
+    except (OSError,ValueError):return {}
+
+
+def _football_context_overlay(player):
+    import unicodedata,re
+    def norm(x):
+        s=''.join(c for c in unicodedata.normalize('NFKD',str(x or '').casefold()) if not unicodedata.combining(c))
+        return re.sub('[^a-z0-9]','',s)
+    data=_football_context();teams=data.get('teams') or {}
+    if not teams:return player
+    team=teams.get(norm(player.get('team')))
+    # Match opponent by explicit name from the fixture; never guess from a league average.
+    opponent_name=player.get('opponent') or player.get('opponent_name')
+    if not opponent_name:
+        try:
+            fixtures=json.loads((Path(__file__).resolve().parent/'data'/'daily_fixtures.json').read_text(encoding='utf-8')).get('football') or {}
+            fid=str(player.get('fixture') or player.get('fixture_id') or '')
+            for games in fixtures.values():
+                for game in games if isinstance(games,list) else []:
+                    if fid and str((game.get('fixture') or {}).get('id'))!=fid:continue
+                    sides=game.get('teams') or {}
+                    home=(sides.get('home') or {}).get('name')
+                    away=(sides.get('away') or {}).get('name')
+                    if norm(home)==norm(player.get('team')):opponent_name=away
+                    elif norm(away)==norm(player.get('team')):opponent_name=home
+                    if opponent_name:break
+                if opponent_name:break
+        except (OSError,ValueError,TypeError,AttributeError):pass
+    opponent=teams.get(norm(opponent_name)) if opponent_name else None
+    if not team and not opponent:return player
+    out=dict(player);m=dict(out.get('v2_metrics') or {})
+    date=str(out.get('kickoff') or '')[:10]
+    if team and (not date or team.get('as_of','')<=date):
+        m['team_xg']=team.get('xg_game')
+        m['team_xga']=team.get('xga_game')
+    if opponent and (not date or opponent.get('as_of','')<=date):
+        m['opponent_xga']=opponent.get('xga_game')
+        # Context for ranking only; relative to average of documented teams in league.
+        league=opponent.get('league')
+        pool=[t.get('xga_game') for t in teams.values() if t.get('league')==league and isinstance(t.get('xga_game'),(int,float))]
+        if pool and sum(pool)>0:
+            m['opponent_factor']=round(max(.8,min(1.2,opponent['xga_game']/(sum(pool)/len(pool)))),4)
+    # Penalty scoring evidence is NOT proof of current designated taker.
+    pid=out.get('player_id') or out.get('id')
+    evidence=(data.get('penalties') or {}).get(str(pid)) if pid is not None else None
+    if evidence and norm(evidence.get('team'))==norm(out.get('team')):
+        m['penalties_scored_season']=evidence.get('scored')
+        m['penalties_missed_season']=evidence.get('missed')
+    out['v2_metrics']=m
+    return out
+
 
 @st.cache_data(ttl=300, show_spinner=False)
 def _football_advanced_rows(csv_mtime):
@@ -373,6 +444,7 @@ def _football_csv_prediction(player):
     output['v2_model']='Understat xG/Spielzeit-Modell (Poisson; Halbzeit angenähert)'
     output['v2_source']=r.get('source') or 'Understat'
     output['v2_metrics']={k:val(r.get(k)) for k in ('npxg90','xg90','shots90','shots_on_target90','shots_in_box90','expected_minutes','team_xg','opponent_factor')}
+    output=_football_context_overlay(output)
     return output
 
 
@@ -505,6 +577,10 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
         data_notes.append("PP1 und Starting Goalie nur bei bestätigten Daten; PP-Eiszeit und High-Danger-Schüsse aus MoneyPuck, sofern verfügbar")
     notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
     highlights_html=spotlight_metrics(player,sport,form_stats)
+    if sport=='football' and form_stats and player.get('v2_model'):
+        updated=football_form_probability(player,form_stats)
+        if isinstance(updated,(int,float)) and updated!=player.get('p'):
+            highlights_html+='<div class="sr-metric-highlights"><div class="sr-metric-highlight"><small>📈 Formangepasste Torprognose (heuristisch)</small><strong>'+html.escape(pct(updated))+'</strong></div></div>' 
     if sport=='nhl':
         evidence=daily_player_evidence(player)
         if evidence:
@@ -1259,8 +1335,9 @@ def football_recent_form(team_id,day,key):
                 if mins is None or mins<=0: continue
                 goals=(stats.get("goals") or {}).get("total") or 0
                 shots=(stats.get("shots") or {}).get("total") or 0
-                rec=records.setdefault(ident,{"played":0,"goals":0,"shots":0,"minutes":0,"rating_sum":0.0,"rating_count":0})
+                rec=records.setdefault(ident,{"played":0,"goals":0,"shots":0,"minutes":0,"rating_sum":0.0,"rating_count":0,"_matches":[]})
                 rec["played"]+=1; rec["goals"]+=goals; rec["shots"]+=shots; rec["minutes"]+=mins
+                rec["_matches"].append((fid,goals,shots,mins))
                 rating=games.get("rating")
                 try:
                     numeric=float(rating)
@@ -1269,6 +1346,20 @@ def football_recent_form(team_id,day,key):
                         rec["rating_count"]+=1
                 except (ValueError,TypeError):
                     pass
+    # Fixture IDs are already sorted newest first. Weight the latest 5/next 5/
+    # previous 10 at 40/35/25%; re-normalize when fewer than 20 exist.
+    fixture_order={fid:i for i,fid in enumerate(fixture_ids)}
+    for rec in records.values():
+        rows=sorted(rec.pop('_matches',[]),key=lambda r:fixture_order.get(r[0],999))[:20]
+        weighted=[]
+        for index,(_,goals,shots,minutes) in enumerate(rows):
+            weight=(.40/5 if index<5 else .35/5 if index<10 else .25/10)
+            weighted.append((weight,goals,shots,minutes))
+        total=sum(w for w,*_ in weighted)
+        if total:
+            rec['weighted_goals_game']=round(sum(w*g for w,g,_,_ in weighted)/total,4)
+            rec['weighted_shots_game']=round(sum(w*sh for w,_,sh,_ in weighted)/total,4)
+            rec['weighted_minutes_game']=round(sum(w*mn for w,_,_,mn in weighted)/total,2)
     return records
 
 
@@ -1346,6 +1437,34 @@ def adjusted_goal_probability(player, stats):
     return min(99.0,round(base*goal_factor*time_factor,2))
 
 
+def football_form_probability(player, stats):
+    """Conservative 20-match form modifier for verified football xG model.
+
+    Never invent missing xG or use the player's actual goals to force a high
+    probability. Weighted shots and minutes adjust the baseline by at most 10%.
+    """
+    base=player.get('p')
+    if not (player.get('sport')=='football' and player.get('v2_model') and
+            isinstance(base,(int,float)) and stats and stats.get('played',0)>=3):
+        return base
+    m=player.get('v2_metrics') or {}
+    shots=stats.get('weighted_shots_game')
+    minutes=stats.get('weighted_minutes_game')
+    if not isinstance(shots,(int,float)) or not isinstance(minutes,(int,float)):
+        return base
+    season_shots=m.get('shots90')
+    expected=m.get('expected_minutes')
+    if not isinstance(season_shots,(int,float)) or season_shots<=0:
+        return base
+    if not isinstance(expected,(int,float)) or expected<=0:
+        return base
+    # Scale observed shots by minutes so a substitute isn't penalized twice.
+    recent_per90=shots*90/max(15,minutes)
+    ratio=max(.5,min(1.5,recent_per90/season_shots))
+    correction=max(.9,min(1.1,1+.15*(ratio-1)))
+    return round(min(99.,max(0.,base*correction)),2)
+
+
 def combo_evidence_score(player, stats):
     """Evidence-based ranking score, not a calibrated probability.
 
@@ -1397,7 +1516,12 @@ def combo_evidence_score(player, stats):
         if reported>=3 and isinstance(pp_goals,(int,float)) and pp_goals>=0:
             score+=min(3.0,pp_goals/reported)*6.0
     # Modest recent-goal signal, so small samples do not dominate xG/shots.
-    score+=min(1.0,max(0.0,float(stats.get("goals") or 0)/n))*5.0
+    recent_goals=stats.get('weighted_goals_game') if player.get('sport')=='football' else None
+    if not isinstance(recent_goals,(int,float)): recent_goals=float(stats.get('goals') or 0)/n
+    score+=min(1.0,max(0.0,recent_goals))*5.0
+    if player.get('sport')=='football':
+        weighted_shots=stats.get('weighted_shots_game')
+        if isinstance(weighted_shots,(int,float)): score+=min(5.0,max(0.0,weighted_shots))*1.5
     opponent=metrics.get("opponent_factor")
     if isinstance(opponent,(int,float)) and math.isfinite(opponent) and opponent>0:
         score*=max(.8,min(1.2,opponent))
@@ -1483,7 +1607,7 @@ def rank_candidates_by_verified_form(pool,day):
             else:
                 stats=nhl_recent_form(player.get("player_id"),day)
             if not stats: continue
-            adjusted=(player.get("p") if player.get("v2_model") else adjusted_goal_probability(player,stats))
+            adjusted=(football_form_probability(player,stats) if player.get('sport')=='football' and player.get('v2_model') else player.get('p') if player.get('v2_model') else adjusted_goal_probability(player,stats))
             if adjusted is None or probability_tier(adjusted,player["sport"])!="high":
                 continue
             score=form_score(stats,player["sport"])
@@ -1603,6 +1727,24 @@ def render_form_combo(picks, view_key="default"):
         if p.get("v2_model"): st.caption("📊 Datenbank 2.0 · " + p["v2_model"] + " · Quelle: " + p.get("v2_source", "unbekannt"))
         if p.get("v2_as_of"): st.caption("🗓️ Statistikstand: " + p["v2_as_of"])
         st.caption("📊 Auswahlfaktoren: " + combo_evidence_caption(p,form))
+        if p['sport']=='football':
+            m=p.get('v2_metrics') or {}
+            def fval(key,unit=''):
+                v=m.get(key)
+                return (f'{v:.2f}'.replace('.',',')+unit) if isinstance(v,(int,float)) else 'Nicht verfügbar'
+            weighted=form.get('weighted_shots_game')
+            weighted_label=f'{weighted:.2f}'.replace('.',',') if isinstance(weighted,(int,float)) else 'Nicht verfügbar'
+            st.markdown('<div class="sr-football-criteria">'+''.join(
+                f'<div class="sr-football-criterion"><small>{html.escape(label)}</small><strong>{html.escape(value)}</strong></div>'
+                for label,value in [
+                    ('⚽ xG / 90',fval('xg90')),('🕒 Erwartete Minuten',fval('expected_minutes')),
+                    ('🛡️ Gegner / xGA',fval('opponent_factor')),
+                    (f'🔥 Form letzte {form["played"]} Spiele',f'{form.get("goals",0)} Tore'),
+                    ('🎯 Schüsse im Strafraum / 90',fval('shots_in_box90')),
+                    ('📈 Gewichtete Schüsse / Spiel',weighted_label),
+                    ('🥅 Elfmeterrolle','Bestätigt' if m.get('penalty_taker')==1 or p.get('penalty_taker') is True else 'Nicht bestätigt'),
+                    ('⚽ Team-xG',fval('team_xg'))]
+            )+'</div>',unsafe_allow_html=True)
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
     st.metric("Ausgewählte Tipps",len(picks))
@@ -2087,4 +2229,17 @@ st.markdown("""<style>
 .sr-pred-details .sr-metric-highlight strong{font-size:.94rem!important;margin-top:2px!important}
 .sr-pred-details .sr-daily-evidence{padding:6px 8px!important;margin-top:6px!important;font-size:.73rem!important}
 @media(max-width:480px){.sr-pred-compact{padding:8px!important}.sr-pred-compact .sr-pred-grade{flex-basis:64px!important}.sr-pred-compact .sr-pred-photo{width:42px!important;height:47px!important;flex-basis:42px!important}}
+</style>""",unsafe_allow_html=True)
+
+# SportRadar football scorer-criteria cards (always visible, including combo picks).
+st.markdown("""<style>
+.sr-metric-highlights{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+.sr-metric-highlight{min-width:0!important;padding:16px 13px!important;min-height:96px!important;border-radius:15px!important}
+.sr-metric-highlight small{font-size:.86rem!important;line-height:1.35!important}
+.sr-metric-highlight strong{font-size:1.35rem!important;overflow-wrap:anywhere!important}
+.sr-football-criteria{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.sr-football-criterion{background:#e5f2ff;border:2px solid #39b6ff;border-radius:15px;padding:15px 12px;min-width:0;min-height:95px;color:#102f4d}
+.sr-football-criterion small{display:block;font-size:.85rem;font-weight:750;line-height:1.35}
+.sr-football-criterion strong{display:block;font-size:1.25rem;font-weight:900;margin-top:10px;overflow-wrap:anywhere}
+@media(max-width:430px){.sr-metric-highlights,.sr-football-criteria{gap:9px!important}.sr-metric-highlight,.sr-football-criterion{padding:12px 10px!important;min-height:89px!important}}
 </style>""",unsafe_allow_html=True)
