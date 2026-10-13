@@ -40,6 +40,11 @@ jobs:
       - name: xG und ixG aktualisieren
         run: python advanced_stats_update.py
 
+      - name: Fußball-Gegnerdaten aktualisieren
+        env:
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+        run: python football_context_update.py
+
       - name: Daten speichern
         run: |
           git config user.name "github-actions[bot]"
