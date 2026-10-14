@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-14T18:55:07.922140+00:00",
+  "updated_at": "2026-10-14T19:11:38.331315+00:00",
   "teams": {
     "bayernmunich": {
       "name": "Bayern Munich",
@@ -864,6 +864,1101 @@
       "games": 6,
       "as_of": "2026-10-14",
       "source": "https://understat.com/getLeagueData/Ligue_1/2026"
+    },
+    "fcschalke04": {
+      "name": "FC Schalke 04",
+      "league": "Bundesliga",
+      "xg_game": 2.31,
+      "xga_game": 2.835,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "1fcnurnberg": {
+      "name": "1. FC Nürnberg",
+      "league": "2. Bundesliga",
+      "xg_game": 2.19,
+      "xga_game": 1.61,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "hannover96": {
+      "name": "Hannover 96",
+      "league": "2. Bundesliga",
+      "xg_game": 2.145,
+      "xga_game": 1.75,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "torontofc": {
+      "name": "Toronto FC",
+      "league": "MLS",
+      "xg_game": 1.1433,
+      "xga_game": 0.9267,
+      "games": 3,
+      "as_of": "2026-10-14",
+      "data_quality": "low",
+      "low_sample": false,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "nashvillesc": {
+      "name": "Nashville SC",
+      "league": "MLS",
+      "xg_game": 0.76,
+      "xga_game": 1.765,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "omonianicosia": {
+      "name": "Omonia Nicosia",
+      "league": "Europa League",
+      "xg_game": 0.32,
+      "xga_game": 1.17,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Europa League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alkholood": {
+      "name": "Al Kholood",
+      "league": "Saudi Pro League",
+      "xg_game": 2.23,
+      "xga_game": 1.48,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alshabab": {
+      "name": "Al Shabab",
+      "league": "Saudi Pro League",
+      "xg_game": 0.945,
+      "xga_game": 2.415,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "scfreiburg": {
+      "name": "SC Freiburg",
+      "league": "Bundesliga",
+      "xg_game": 2.485,
+      "xga_game": 0.365,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "borussiamonchengladbach": {
+      "name": "Borussia Mönchengladbach",
+      "league": "Bundesliga",
+      "xg_game": 0.64,
+      "xga_game": 3.28,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "svdarmstadt98": {
+      "name": "SV Darmstadt 98",
+      "league": "2. Bundesliga",
+      "xg_game": 1.285,
+      "xga_game": 1.31,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "arminiabielefeld": {
+      "name": "Arminia Bielefeld",
+      "league": "2. Bundesliga",
+      "xg_game": 1.205,
+      "xga_game": 1.64,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "atlantaunitedfc": {
+      "name": "Atlanta United FC",
+      "league": "MLS",
+      "xg_game": 1.38,
+      "xga_game": 1.62,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "orlandocitysc": {
+      "name": "Orlando City SC",
+      "league": "MLS",
+      "xg_game": 2.63,
+      "xga_game": 0.99,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alfateh": {
+      "name": "Al-Fateh",
+      "league": "Saudi Pro League",
+      "xg_game": 1.28,
+      "xga_game": 2.53,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "aldiriyah": {
+      "name": "Al Diriyah",
+      "league": "Saudi Pro League",
+      "xg_game": 2.53,
+      "xga_game": 1.28,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "fsvmainz05": {
+      "name": "FSV Mainz 05",
+      "league": "Bundesliga",
+      "xg_game": 1.675,
+      "xga_game": 1.385,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "vflbochum": {
+      "name": "VfL Bochum",
+      "league": "2. Bundesliga",
+      "xg_game": 1.285,
+      "xga_game": 1.14,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "spvgggreutherfurth": {
+      "name": "SpVgg Greuther Fürth",
+      "league": "2. Bundesliga",
+      "xg_game": 1.71,
+      "xga_game": 1.625,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "hullcity": {
+      "name": "Hull City",
+      "league": "Premier League",
+      "xg_game": 1.195,
+      "xga_game": 1.37,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Premier League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "cfmontreal": {
+      "name": "CF Montreal",
+      "league": "MLS",
+      "xg_game": 1.115,
+      "xga_game": 0.875,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "charlotte": {
+      "name": "Charlotte",
+      "league": "MLS",
+      "xg_game": 1.31,
+      "xga_game": 1.29,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "celje": {
+      "name": "Celje",
+      "league": "Europa League",
+      "xg_game": 0.9,
+      "xga_game": 1.93,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Europa League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alnassr": {
+      "name": "Al-Nassr",
+      "league": "Saudi Pro League",
+      "xg_game": 1.34,
+      "xga_game": 0.26,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "abha": {
+      "name": "Abha",
+      "league": "Saudi Pro League",
+      "xg_game": 0.34,
+      "xga_game": 1.28,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "scpaderborn07": {
+      "name": "SC Paderborn 07",
+      "league": "Bundesliga",
+      "xg_game": 0.61,
+      "xga_game": 1.495,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "1fcmagdeburg": {
+      "name": "1. FC Magdeburg",
+      "league": "2. Bundesliga",
+      "xg_game": 1.18,
+      "xga_game": 2.255,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "1fckaiserslautern": {
+      "name": "1. FC Kaiserslautern",
+      "league": "2. Bundesliga",
+      "xg_game": 0.97,
+      "xga_game": 1.19,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "slovanbratislava": {
+      "name": "Slovan Bratislava",
+      "league": "Champions League",
+      "xg_game": 0.64,
+      "xga_game": 4.71,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Champions League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "benfica": {
+      "name": "Benfica",
+      "league": "Europa League",
+      "xg_game": 0.64,
+      "xga_game": 0.96,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Europa League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alqadisiyahfc": {
+      "name": "Al-Qadisiyah FC",
+      "league": "Saudi Pro League",
+      "xg_game": 2.585,
+      "xga_game": 1.06,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alettifaq": {
+      "name": "Al-Ettifaq",
+      "league": "Saudi Pro League",
+      "xg_game": 1.76,
+      "xga_game": 1.58,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "1899hoffenheim": {
+      "name": "1899 Hoffenheim",
+      "league": "Bundesliga",
+      "xg_game": 2.32,
+      "xga_game": 2.055,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "eintrachtbraunschweig": {
+      "name": "Eintracht Braunschweig",
+      "league": "2. Bundesliga",
+      "xg_game": 2.35,
+      "xga_game": 1.105,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "dynamodresden": {
+      "name": "Dynamo Dresden",
+      "league": "2. Bundesliga",
+      "xg_game": 1.465,
+      "xga_game": 1.75,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "bayernmunchen": {
+      "name": "Bayern München",
+      "league": "Bundesliga",
+      "xg_game": 4.06,
+      "xga_game": 0.79,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "herthabsc": {
+      "name": "Hertha BSC",
+      "league": "2. Bundesliga",
+      "xg_game": 0.64,
+      "xga_game": 1.04,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alhazm": {
+      "name": "Al-Hazm",
+      "league": "Saudi Pro League",
+      "xg_game": 1.22,
+      "xga_game": 0.42,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "stlouiscity": {
+      "name": "St. Louis City",
+      "league": "MLS",
+      "xg_game": 2.4,
+      "xga_game": 1.02,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "sportingkansascity": {
+      "name": "Sporting Kansas City",
+      "league": "MLS",
+      "xg_game": 1.02,
+      "xga_game": 2.4,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "rbleipzig": {
+      "name": "RB Leipzig",
+      "league": "Bundesliga",
+      "xg_game": 3.96,
+      "xga_game": 1.09,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "1fcheidenheim": {
+      "name": "1. FC Heidenheim",
+      "league": "2. Bundesliga",
+      "xg_game": 2.59,
+      "xga_game": 1.93,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "vflosnabruck": {
+      "name": "VfL Osnabrück",
+      "league": "2. Bundesliga",
+      "xg_game": 1.93,
+      "xga_game": 2.59,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "seattlesounders": {
+      "name": "Seattle Sounders",
+      "league": "MLS",
+      "xg_game": 0.66,
+      "xga_game": 2.64,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "portlandtimbers": {
+      "name": "Portland Timbers",
+      "league": "MLS",
+      "xg_game": 2.64,
+      "xga_game": 0.66,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "holsteinkiel": {
+      "name": "Holstein Kiel",
+      "league": "2. Bundesliga",
+      "xg_game": 1.735,
+      "xga_game": 1.635,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "parma": {
+      "name": "Parma",
+      "league": "Serie A",
+      "xg_game": 0.75,
+      "xga_game": 0.94,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Serie A"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "neom": {
+      "name": "NEOM",
+      "league": "Saudi Pro League",
+      "xg_game": 1.1,
+      "xga_game": 1.09,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alfayha": {
+      "name": "Al-Fayha",
+      "league": "Saudi Pro League",
+      "xg_game": 1.09,
+      "xga_game": 1.1,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "1fckoln": {
+      "name": "1. FC Köln",
+      "league": "Bundesliga",
+      "xg_game": 2.405,
+      "xga_game": 2.675,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "karlsruhersc": {
+      "name": "Karlsruher SC",
+      "league": "2. Bundesliga",
+      "xg_game": 1.42,
+      "xga_game": 1.17,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "svelversberg": {
+      "name": "SV Elversberg",
+      "league": "Bundesliga",
+      "xg_game": 1.27,
+      "xga_game": 1.88,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "vflwolfsburg": {
+      "name": "VfL Wolfsburg",
+      "league": "2. Bundesliga",
+      "xg_game": 1.26,
+      "xga_game": 0.86,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "estactroyes": {
+      "name": "Estac Troyes",
+      "league": "Ligue 1",
+      "xg_game": 0.42,
+      "xga_game": 1.8,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Ligue 1"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "losangelesgalaxy": {
+      "name": "Los Angeles Galaxy",
+      "league": "MLS",
+      "xg_game": 1.0,
+      "xga_game": 2.29,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "losangelesfc": {
+      "name": "Los Angeles FC",
+      "league": "MLS",
+      "xg_game": 2.29,
+      "xga_game": 1.0,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alhilalsaudifc": {
+      "name": "Al-Hilal Saudi FC",
+      "league": "Saudi Pro League",
+      "xg_game": 4.5,
+      "xga_game": 1.82,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alfaisalyfc": {
+      "name": "Al-Faisaly FC",
+      "league": "Saudi Pro League",
+      "xg_game": 1.82,
+      "xga_game": 4.5,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "stadebrestois29": {
+      "name": "Stade Brestois 29",
+      "league": "Ligue 1",
+      "xg_game": 2.72,
+      "xga_game": 0.67,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Ligue 1"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "philadelphiaunion": {
+      "name": "Philadelphia Union",
+      "league": "MLS",
+      "xg_game": 3.1,
+      "xga_game": 0.81,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "newyorkredbulls": {
+      "name": "New York Red Bulls",
+      "league": "MLS",
+      "xg_game": 0.81,
+      "xga_game": 3.1,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alriyadh": {
+      "name": "Al Riyadh",
+      "league": "Saudi Pro League",
+      "xg_game": 0.63,
+      "xga_game": 2.67,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "fcstpauli": {
+      "name": "FC St. Pauli",
+      "league": "2. Bundesliga",
+      "xg_game": 2.14,
+      "xga_game": 1.935,
+      "games": 2,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "newenglandrevolution": {
+      "name": "New England Revolution",
+      "league": "MLS",
+      "xg_game": 0.93,
+      "xga_game": 1.23,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "altaawon": {
+      "name": "Al Taawon",
+      "league": "Saudi Pro League",
+      "xg_game": 1.45,
+      "xga_game": 0.72,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alkhaleejsaihat": {
+      "name": "Al Khaleej Saihat",
+      "league": "Saudi Pro League",
+      "xg_game": 0.72,
+      "xga_game": 1.45,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "fcaugsburg": {
+      "name": "FC Augsburg",
+      "league": "Bundesliga",
+      "xg_game": 3.72,
+      "xga_game": 2.1,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "energiecottbus": {
+      "name": "Energie Cottbus",
+      "league": "2. Bundesliga",
+      "xg_game": 1.35,
+      "xga_game": 3.03,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "2. Bundesliga"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "newcastle": {
+      "name": "Newcastle",
+      "league": "Premier League",
+      "xg_game": 1.58,
+      "xga_game": 2.98,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Premier League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "columbuscrew": {
+      "name": "Columbus Crew",
+      "league": "MLS",
+      "xg_game": 1.67,
+      "xga_game": 1.41,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "newyorkcityfc": {
+      "name": "New York City FC",
+      "league": "MLS",
+      "xg_game": 1.41,
+      "xga_game": 1.67,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "MLS"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "alittihadfc": {
+      "name": "Al-Ittihad FC",
+      "league": "Saudi Pro League",
+      "xg_game": 2.34,
+      "xga_game": 2.27,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Saudi Pro League"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
+    },
+    "asroma": {
+      "name": "AS Roma",
+      "league": "Serie A",
+      "xg_game": 3.07,
+      "xga_game": 0.35,
+      "games": 1,
+      "as_of": "2026-10-14",
+      "data_quality": "very_low",
+      "low_sample": true,
+      "competitions_in_sample": [
+        "Serie A"
+      ],
+      "source": "API-Football verified fixture expected_goals (mixed competitions)",
+      "sample": "last_20_available"
     }
   },
   "penalties": {
