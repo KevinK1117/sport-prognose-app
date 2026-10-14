@@ -51,23 +51,54 @@ def main():
                 for side in ('home','away'):
                     team=(game.get('teams') or {}).get(side) or {};tid=team.get('id')
                     if tid and season_id:candidates[(tid,season_id)]=team.get('name','')
-        # Bounded calls; API-Football player endpoint is paginated.
-        for (tid,year),team_name in list(candidates.items())[:24]:
+        # Fetch every page before accepting a team's penalty evidence.
+        # Keep a bounded number of teams to respect API quotas.
+        for (tid, year), team_name in list(candidates.items())[:24]:
             try:
-                r=requests.get('https://v3.football.api-sports.io/players',params={'team':tid,'season':year,'page':1},headers={'x-apisports-key':key},timeout=22)
-                r.raise_for_status();payload=r.json()
-                if payload.get('errors'):continue
-                if int((payload.get('paging') or {}).get('total') or 1)>1:
-                    print('Penalty evidence skipped (pagination incomplete):',team_name);continue
-                for record in payload.get('response') or []:
-                    player=record.get('player') or {};pid=player.get('id')
-                    if not pid:continue
+                collected = []
+                page = 1
+                while True:
+                    r = requests.get(
+                        'https://v3.football.api-sports.io/players',
+                        params={'team': tid, 'season': year, 'page': page},
+                        headers={'x-apisports-key': key}, timeout=22,
+                    )
+                    r.raise_for_status()
+                    payload = r.json()
+                    if payload.get('errors'):
+                        raise ValueError('API-Football reported an error')
+                    paging = payload.get('paging') or {}
+                    total = int(paging.get('total') or 1)
+                    current = int(paging.get('current') or page)
+                    if current != page or total < 1 or total > 30:
+                        raise ValueError('Invalid or excessive pagination')
+                    collected.extend(payload.get('response') or [])
+                    if page >= total:
+                        break
+                    page += 1
+                for record in collected:
+                    player = record.get('player') or {}
+                    pid = player.get('id')
+                    if not pid:
+                        continue
                     for stat in record.get('statistics') or []:
-                        if (stat.get('team') or {}).get('id')!=tid:continue
-                        p=stat.get('penalty') or {};scored=number(p.get('scored'));missed=number(p.get('missed'))
-                        if scored is None and missed is None:continue
-                        penalties[str(pid)]={'name':player.get('name'),'team':team_name,'team_id':tid,'season':year,'scored':scored,'missed':missed,'as_of':now.date().isoformat(),'source':'API-Football /players (historical evidence only)'}
-            except (requests.RequestException,ValueError,TypeError) as e:print('Penalty evidence unavailable:',team_name,type(e).__name__)
+                        if (stat.get('team') or {}).get('id') != tid:
+                            continue
+                        p = stat.get('penalty') or {}
+                        scored = number(p.get('scored'))
+                        missed = number(p.get('missed'))
+                        if scored is None and missed is None:
+                            continue
+                        penalties[str(pid)] = {
+                            'name': player.get('name'), 'team': team_name,
+                            'team_id': tid, 'season': year,
+                            'scored': scored, 'missed': missed,
+                            'as_of': now.date().isoformat(),
+                            'source': 'API-Football /players (historical evidence only)',
+                        }
+                print('Penalty evidence loaded:', team_name, 'pages:', page)
+            except (requests.RequestException, ValueError, TypeError) as e:
+                print('Penalty evidence unavailable:', team_name, type(e).__name__)
     if not teams and not penalties:
         print('No new context; old file retained');return
     OUT.parent.mkdir(exist_ok=True,parents=True)

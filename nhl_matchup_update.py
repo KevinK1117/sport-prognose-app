@@ -54,6 +54,32 @@ def opponent_factors():
         print('NHL team xGA unavailable:', type(exc).__name__)
         return {}
 
+def goals_against_fallback():
+    """NHL official standings goals against per game; NOT an xGA measurement."""
+    try:
+        response = requests.get('https://api-web.nhle.com/v1/standings/now', timeout=25, headers=HEAD)
+        response.raise_for_status()
+        standings = response.json().get('standings') or []
+        candidates = {}
+        for row in standings:
+            abbr = row.get('teamAbbrev') or {}
+            team = str(abbr.get('default') if isinstance(abbr, dict) else abbr or '').upper()
+            games = number(row.get('gamesPlayed'))
+            ga = number(row.get('goalAgainst'))
+            if len(team) == 3 and games and games >= 3 and ga is not None:
+                candidates[team] = ga / games
+        if len(candidates) < 20:
+            print('NHL goals-against fallback: insufficient standings data')
+            return {}
+        baseline = sum(candidates.values()) / len(candidates)
+        if baseline <= 0:
+            return {}
+        print('NHL opponent factors: official goals-against fallback (not xGA)')
+        return {team: round(max(.8, min(1.2, ga / baseline)), 4) for team, ga in candidates.items()}
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        print('NHL goals-against fallback unavailable:', type(exc).__name__)
+        return {}
+
 def confirmed_goalie(game):
     # The NHL boxscore is a confirmation of who actually STARTED, not a pregame prediction.
     state = str(game.get('gameState') or '').upper()
@@ -91,7 +117,11 @@ def main():
         print('NHL matchup: fixture snapshot unavailable')
         return
     factors = opponent_factors()
-    payload = {'updated_at': datetime.now(timezone.utc).isoformat(), 'source': 'MoneyPuck team xGA / NHL official boxscore', 'games': {}}
+    factor_source = "MoneyPuck team xGA"
+    if not factors:
+        factors = goals_against_fallback()
+        factor_source = "NHL official goals against (proxy, not xGA)" if factors else "unavailable"
+    payload = {'updated_at': datetime.now(timezone.utc).isoformat(), 'source': factor_source + ' / NHL official boxscore', 'opponent_factor_source': factor_source, 'games': {}}
     for item in (snapshot.get('nhl') or {}).values():
         if not isinstance(item, dict):
             continue
