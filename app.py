@@ -354,8 +354,17 @@ def _football_context_overlay(player):
         return re.sub('[^a-z0-9]','',s)
     data=_football_context();teams=data.get('teams') or {}
     if not teams:return player
-    team=teams.get(norm(player.get('team')))
-    # Match opponent by explicit name from the fixture; never guess from a league average.
+    def find_team(name):
+        """Use exact normalized names first; avoid guessing ambiguous clubs."""
+        key=norm(name)
+        if not key:return None
+        found=teams.get(key)
+        if isinstance(found,dict):return found
+        matches=[v for v in teams.values() if isinstance(v,dict) and norm(v.get('name'))==key]
+        return matches[0] if len(matches)==1 else None
+
+    team=find_team(player.get('team'))
+    # Resolve opponent from the explicit fixture, never from a league average.
     opponent_name=player.get('opponent') or player.get('opponent_name')
     if not opponent_name:
         try:
@@ -372,20 +381,33 @@ def _football_context_overlay(player):
                     if opponent_name:break
                 if opponent_name:break
         except (OSError,ValueError,TypeError,AttributeError):pass
-    opponent=teams.get(norm(opponent_name)) if opponent_name else None
+    opponent=find_team(opponent_name)
     if not team and not opponent:return player
     out=dict(player);m=dict(out.get('v2_metrics') or {})
     date=str(out.get('kickoff') or '')[:10]
-    if team and (not date or team.get('as_of','')<=date):
+    def usable(rec):
+        # Do not use statistics aggregated after the fixture (data leakage).
+        return rec and (not date or not rec.get('as_of') or str(rec['as_of'])[:10]<=date)
+    if usable(team):
         m['team_xg']=team.get('xg_game')
         m['team_xga']=team.get('xga_game')
-    if opponent and (not date or opponent.get('as_of','')<=date):
+        m['team_xg_source']=team.get('source','')
+        m['team_xg_games']=team.get('games')
+        m['team_xg_quality']=team.get('quality') or ('low' if (team.get('games') or 0)<3 else 'medium' if (team.get('games') or 0)<10 else 'high')
+        m['team_xg_competition']=team.get('league','')
+    if usable(opponent):
         m['opponent_xga']=opponent.get('xga_game')
-        # Context for ranking only; relative to average of documented teams in league.
+        m['opponent_xga_source']=opponent.get('source','')
+        m['opponent_xga_games']=opponent.get('games')
+        m['opponent_xga_quality']=opponent.get('quality') or ('low' if (opponent.get('games') or 0)<3 else 'medium' if (opponent.get('games') or 0)<10 else 'high')
+        m['opponent_xga_competition']=opponent.get('league','')
+        # Only compare like-for-like league values. Mixed competitions have no
+        # meaningful same-league baseline, so keep the factor neutral.
         league=opponent.get('league')
-        pool=[t.get('xga_game') for t in teams.values() if t.get('league')==league and isinstance(t.get('xga_game'),(int,float))]
-        if pool and sum(pool)>0:
-            m['opponent_factor']=round(max(.8,min(1.2,opponent['xga_game']/(sum(pool)/len(pool)))),4)
+        if league and 'mixed' not in str(opponent.get('source','')).lower():
+            pool=[t.get('xga_game') for t in teams.values() if isinstance(t,dict) and t.get('league')==league and isinstance(t.get('xga_game'),(int,float))]
+            if len(pool)>=5 and sum(pool)>0:
+                m['opponent_factor']=round(max(.8,min(1.2,opponent['xga_game']/(sum(pool)/len(pool)))),4)
     # Penalty scoring evidence is NOT proof of current designated taker.
     pid=out.get('player_id') or out.get('id')
     evidence=(data.get('penalties') or {}).get(str(pid)) if pid is not None else None
@@ -1488,6 +1510,13 @@ def football_combo_rank(player,stats,base_score):
     if isinstance(xga,(int,float)) and math.isfinite(xga): bonus+=min(3.,max(0.,xga))*1.8
     team_xg=m.get('team_xg')
     if isinstance(team_xg,(int,float)) and math.isfinite(team_xg): bonus+=min(3.,max(0.,team_xg))*1.4
+    # Sparse xG samples inform the ranking less than established histories.
+    for key in ('opponent_xga','team_xg'):
+        value=m.get(key)
+        if isinstance(value,(int,float)):
+            games=m.get('opponent_xga_games' if key=='opponent_xga' else 'team_xg_games')
+            if isinstance(games,int) and games<3:
+                bonus-=min(2.5,bonus*.12)
     # Reliability is a modest multiplier, not an assertion of certainty.
     return round((base_score+bonus)*(.82+.18*quality),3)
 
@@ -1774,6 +1803,8 @@ def render_form_combo(picks, view_key="default"):
                     ('🥅 Elfmeterrolle','Bestätigt' if m.get('penalty_taker')==1 or p.get('penalty_taker') is True else 'Nicht bestätigt'),
                     ('⚽ Team-xG',fval('team_xg')),
                     ('🛡️ Team-xGA',fval('team_xga')),
+                    ('📚 Team-xG Datenbasis',str(m.get('team_xg_games'))+' Spiele · '+str(m.get('team_xg_competition') or 'Wettbewerb unbekannt') if m.get('team_xg_games') is not None else 'Nicht verfügbar'),
+                    ('📚 Gegner-xGA Datenbasis',str(m.get('opponent_xga_games'))+' Spiele · '+str(m.get('opponent_xga_competition') or 'Wettbewerb unbekannt') if m.get('opponent_xga_games') is not None else 'Nicht verfügbar'),
                     ('📋 Datenabdeckung',f'{football_data_quality(p,form)*100:.0f} %')]
             )+'</div>',unsafe_allow_html=True)
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
