@@ -292,27 +292,33 @@ def spotlight_metrics(player, sport, form=None):
         blocks.append(tile('🏒 Ø Eiszeit / Spiel',f'{minutes:.1f} Min.'.replace('.',',') if minutes is not None else 'Nicht verfügbar','ice',minutes is None))
         pp=player.get('powerplay_minutes')
         blocks.append(tile('⚡ Ø Powerplay-Eiszeit',f'{pp:.1f} Min.'.replace('.',',') if isinstance(pp,(int,float)) else 'Nicht verfügbar','ice',not isinstance(pp,(int,float))))
+    if sport=='football':
+        v2=player.get('v2_metrics') or {}
+        def metric(label, value, suffix='', digits=2):
+            if isinstance(value,(int,float)) and math.isfinite(value):
+                blocks.append(tile(label, f'{value:.{digits}f}'.replace('.',',')+suffix))
+            else:
+                blocks.append(tile(label, 'Nicht verfügbar', missing=True))
+        metric('⚽ xG / 90',v2.get('xg90'))
+        metric('🎯 Schüsse / 90',v2.get('shots90') if v2.get('shots90') is not None else player.get('api_shots90'))
+        metric('🥅 Schüsse aufs Tor / 90',v2.get('shots_on_target90') if v2.get('shots_on_target90') is not None else player.get('api_shots_on90'))
+        metric('🎯 Strafraum-Schüsse / 90',v2.get('shots_in_box90'))
+        metric('🕒 Erwartete Minuten (Modell)',v2.get('expected_minutes'),' Min.',1)
+        metric('📋 Ø Einsatzminuten (Saison)',player.get('minutes'),' Min.',1)
+        metric('🛡️ Gegner xGA / Spiel',v2.get('opponent_xga'))
+        metric('⚽ Team xG / Spiel',v2.get('team_xg'))
+        metric('🛡️ Team xGA / Spiel',v2.get('team_xga'))
+        blocks.append(tile('🎯 Elfmeterrolle','Bestätigt' if player.get('penalty_taker') is True else 'Nicht bestätigt',missing=player.get('penalty_taker') is not True))
+        if isinstance(v2.get('penalties_scored_season'),(int,float)):
+            blocks.append(tile('⚽ Elfmeter verwandelt (Saison)',str(int(v2['penalties_scored_season']))+' · historisch'))
+        n=(form or {}).get('played',0)
+        blocks.append(tile('🔥 Form letzte Spiele',f'{(form or {}).get("goals",0)} Tore · {(form or {}).get("shots",0)} Schüsse / {n} Spiele' if n else 'Nicht verfügbar',missing=not n))
+        sample=v2.get('team_xg_games')
+        blocks.append(tile('📊 Team-xG Datenbasis',f'{sample} Spiele' if isinstance(sample,int) else 'Nicht verfügbar',missing=not isinstance(sample,int)))
     if player.get('v2_model'):
         v2=player.get('v2_metrics') or {}
         if sport=='football':
-            for field,label in [('npxg90','Non-Penalty xG / 90'),('shots90','Schüsse / 90'),('shots_in_box90','Strafraum-Schüsse / 90'),('shots_on_target90','Schüsse aufs Tor / 90'),('expected_minutes','Erwartete Spielminuten'),('team_xg','Team-xG (Prognose)')]:
-                if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',',')))
-            # Transparent football scorer criteria, each in its own visible tile.
-            opponent=v2.get('opponent_factor')
-            blocks.append(tile('🛡️ Gegnerstärke / xGA', f'{opponent:.2f}'.replace('.',',') if isinstance(opponent,(int,float)) else 'Keine verifizierten Daten', missing=not isinstance(opponent,(int,float))))
-            penalty=v2.get('penalty_taker',player.get('penalty_taker'))
-            blocks.append(tile('🎯 Elfmeterschütze','Bestätigt' if penalty is True or penalty==1 else 'Nicht bestätigt',missing=not (penalty is True or penalty==1)))
-            if isinstance(v2.get('opponent_xga'),(int,float)): blocks.append(tile('🛡️ Gegner xGA / Spiel',f"{v2['opponent_xga']:.2f}".replace('.',',')))
-            if isinstance(v2.get('team_xga'),(int,float)): blocks.append(tile('🛡️ Team xGA / Spiel',f"{v2['team_xga']:.2f}".replace('.',',')))
-            if isinstance(v2.get('penalties_scored_season'),(int,float)): blocks.append(tile('🎯 Elfmeter verwandelt (Saison)',str(int(v2['penalties_scored_season']))+' · Schütze nicht bestätigt'))
-            team_xg=v2.get('team_xg')
-            if team_xg is None: blocks.append(tile('⚽ Team-Offensive / xG','Keine verifizierten Daten',missing=True))
-            if form and form.get('played'):
-                n=form['played']
-                blocks.append(tile(f'🔥 Form letzte {n} Spiele',f"{form.get('goals',0)} Tore · {form.get('shots',0)} Schüsse"))
-                weighted=form.get('weighted_shots_game')
-                if isinstance(weighted,(int,float)):
-                    blocks.append(tile('📈 Schüsse / Spiel (gewichtet)',f'{weighted:.2f}'.replace('.',',')))
+            pass  # All football tiles are rendered above, including missing values.
         else:
             for field,label in [('ixg60','Expected Goals / 60'),('shots_on_target_game','Schüsse aufs Tor / Spiel'),('attempts_game','Schussversuche / Spiel'),('pp_toi_game','Powerplay-Eiszeit / Spiel'),('high_danger_game','High-Danger-Schüsse / Spiel'),('goalie_factor','Starting-Goalie-Faktor')]:
                 if v2.get(field) is not None: blocks.append(tile(label,f"{v2[field]:.2f}".replace('.',','),'ice'))
@@ -444,20 +450,20 @@ def _football_csv_prediction(player):
             return None
     path=Path(__file__).resolve().parent/'data'/'advanced_player_metrics.csv'
     try: rows=_football_advanced_rows(path.stat().st_mtime_ns)
-    except OSError: return player
+    except OSError: return _football_context_overlay(player)
     team=norm(player.get('team'))
     name=norm(player.get('name'))
     # Explicit, team-scoped alias. Do not fuzzy-match unrelated footballers.
     aliases={('levante','brugui'):'rogerbrugue',('levante','brugi'):'rogerbrugue'}
     name=aliases.get((team,name),name)
     matches=[r for r in rows if norm(r.get('team'))==team and norm(r.get('name'))==name]
-    if len(matches)!=1:return player
+    if len(matches)!=1:return _football_context_overlay(player)
     r=matches[0]
     xg=val(r.get('xg90')); mins=val(r.get('expected_minutes'))
-    if xg is None or mins is None or not (0<=xg<=5 and 0<mins<=120):return player
+    if xg is None or mins is None or not (0<=xg<=5 and 0<mins<=120):return _football_context_overlay(player)
     # Do not use data from after the scheduled match.
     fixture=str(player.get('kickoff') or '')[:10]
-    if fixture and str(r.get('as_of') or '')[:10]>fixture:return player
+    if fixture and str(r.get('as_of') or '')[:10]>fixture:return _football_context_overlay(player)
     lam=xg*mins/90
     output=dict(player)
     output['p']=round(100*(-math.expm1(-lam)),2)
@@ -633,9 +639,19 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     st.markdown(f'''<div class="player sr-{tier} sr-pred-compact"><div class="sr-pred-head"><div class="sr-pred-photo">{avatar}</div><div class="sr-pred-identity"><div class="player-head">{name}</div><div class="sr-pred-league">{league_text} · {team}</div></div><div class="sr-pred-grade sr-grade-{grade_color}"><small>{"API-Football Ø-Note" if sport=="football" else "🔥 Formindex"}</small><strong>{grade_text}<em>/10</em></strong></div></div><div class="pair"><div class="prob"><small>{html.escape(period_label)}</small><strong>{pct(player.get("half"))}</strong></div><div class="prob"><small>Gesamtspiel</small><strong>{pct(player.get("p"))}</strong></div></div><div class="sr-pred-chips">{chips}</div><div class="sr-pred-details sr-pred-always-visible"><div class="sr-pred-detail-body">{highlights_html}{form_html}{notes_html}</div></div></div>''',unsafe_allow_html=True)
 
 
+def football_attacking_position(position):
+    """Only API-Football midfielders and attackers; unknown roles are excluded."""
+    value=str(position or '').strip().casefold()
+    return value in {'midfielder','attacker','midfield','forward','striker','m','f',
+                     'mittelfeld','mittelfeldspieler','stürmer','stuermer',
+                     'winger','centre-forward','center-forward','attacking midfielder'}
+
+
 def show_players(players,period_label,sport="hockey"):
+    if sport == "football":
+        players = [p for p in players if football_attacking_position(p.get("position"))]
     if not players:
-        st.info("Keine verlässlichen Spielerstatistiken verfügbar."); return
+        st.info("Keine geeigneten Mittelfeldspieler oder Stürmer mit Spielerstatistiken verfügbar."); return
     tab1,tab2=st.tabs(["🎯 Spielerprognosen","📊 Tabelle"])
     with tab1:
         for p in players:
@@ -687,7 +703,10 @@ def football_players(league_id,year,team_id,key):
                 total_goals=goals.get("total") or 0; total_minutes=games.get("minutes")
                 avg_minutes=total_minutes/apps if isinstance(total_minutes,(int,float)) and total_minutes>0 else None
                 ident=player.get("id") or player.get("name")
-                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","position":games.get("position") or "Unbekannt","goals":total_goals,"games":apps,"shots":shots.get("total"),"shots_on":shots.get("on"),"xg":None,"minutes":avg_minutes,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
+                result[ident]={"name":player.get("name") or "Unbekannt","player_id":player.get("id"),"team_id":team_id,"team":team.get("name") or "","position":games.get("position") or "Unbekannt","goals":total_goals,"games":apps,"shots":shots.get("total"),"shots_on":shots.get("on"),"xg":None,"minutes":avg_minutes,
+                               "api_shots90":round(shots["total"]*90/total_minutes,3) if isinstance(shots.get("total"),(int,float)) and isinstance(total_minutes,(int,float)) and total_minutes>0 else None,
+                               "api_shots_on90":round(shots["on"]*90/total_minutes,3) if isinstance(shots.get("on"),(int,float)) and isinstance(total_minutes,(int,float)) and total_minutes>0 else None,
+                               "api_minutes_total":total_minutes,"api_goals90":round(total_goals*90/total_minutes,3) if isinstance(total_minutes,(int,float)) and total_minutes>0 else None,"p":probability(total_goals,apps,avg_minutes),"half":probability(total_goals,apps,avg_minutes,period=0.45)}
         if len(rows)<20: break
     return list(result.values())
 
@@ -1284,7 +1303,8 @@ def combo_candidates(day, sport, league):
             for team in (home,away):
                 players=football_players(LEAGUES[league],year,team.get("id"),secret("API_SPORTS_KEY")) if secret("API_SPORTS_KEY") else []
                 for player in (players or []):
-                    if player.get("games",0)>=3 and player.get("p") is not None:
+                    if (football_attacking_position(player.get("position")) and
+                            player.get("games",0)>=3 and player.get("p") is not None):
                         candidates.append({**player,"sport":"football","league":league,"kickoff":kickoff.isoformat(),"match":f'{home.get("name","?")} – {away.get("name","?")}',"fixture":str(fixture_id or f'{home.get("id")}-{away.get("id")}')})
     elif league=="NHL":
         games=fixtures_for("nhl",day)
@@ -1541,7 +1561,8 @@ def combo_evidence_score(player, stats):
         if isinstance(shots90,(int,float)) and math.isfinite(shots90) and shots90>=0:
             score+=min(6.0,shots90)*2.0
         else:
-            score+=min(5.0,shots)*2.0
+            api_shots=player.get('api_shots90')
+            score+=min(6.0,api_shots)*2.0 if isinstance(api_shots,(int,float)) else min(5.0,shots)*2.0
         score+=min(90.0,minutes)/90.0*9.0
         expected=metrics.get("expected_minutes")
         if isinstance(expected,(int,float)) and math.isfinite(expected) and expected>=0:
