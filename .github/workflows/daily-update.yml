@@ -18,33 +18,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Pakete installieren
         run: pip install -r requirements.txt
-
       - name: Spielpläne aktualisieren
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
           DEL_LEAGUE_ID: ${{ secrets.DEL_LEAGUE_ID }}
         run: python daily_update.py
-
       - name: Spielerstatistiken aktualisieren
         id: player_update
         continue-on-error: true
         run: python daily_player_update.py
-
       - name: xG und ixG aktualisieren
         run: python advanced_stats_update.py
-
       - name: Fußball-Gegnerdaten aktualisieren
         env:
           API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
         run: python football_context_update.py
-
+      - name: xG-Abdeckung alle Fußballligen erweitern
+        env:
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+          FOOTBALL_XG_MAX_REQUESTS: '45'
+        run: python football_xg_coverage_update.py
       - name: Daten speichern
         run: |
           git config user.name "github-actions[bot]"
