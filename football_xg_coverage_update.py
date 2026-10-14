@@ -23,7 +23,7 @@ KEY = os.getenv('API_SPORTS_KEY', '').strip()
 MAX_REQUESTS = max(0, int(os.getenv('FOOTBALL_XG_MAX_REQUESTS', '45')))
 LOOKBACK_DAYS = max(35, int(os.getenv('FOOTBALL_XG_LOOKBACK_DAYS', '120')))
 RETRY_MISSING_DAYS = max(1, int(os.getenv('FOOTBALL_XG_RETRY_DAYS', '14')))
-MIN_GAMES = max(1, int(os.getenv('FOOTBALL_XG_MIN_GAMES', '3')))
+MIN_GAMES = max(1, int(os.getenv('FOOTBALL_XG_MIN_GAMES', '1')))
 
 
 def norm(value):
@@ -175,6 +175,7 @@ def main():
         teams_context = {}
         context['teams'] = teams_context
     updated = 0
+    low_sample = 0
     insufficient = 0
     understat_preferred = 0
     for key, games in per_team.items():
@@ -182,6 +183,8 @@ def main():
         if len(games) < MIN_GAMES:
             insufficient += 1
             continue
+        if len(games) < 3:
+            low_sample += 1
         old = teams_context.get(key) or {}
         if str(old.get('source', '')).startswith('https://understat.com/'):
             understat_preferred += 1
@@ -191,6 +194,9 @@ def main():
             'xg_game': round(sum(g[1] for g in games) / len(games), 4),
             'xga_game': round(sum(g[2] for g in games) / len(games), 4),
             'games': len(games), 'as_of': today.isoformat(),
+            'data_quality': ('very_low' if len(games) < 3 else 'low' if len(games) < 6 else 'medium' if len(games) < 10 else 'higher'),
+            'low_sample': len(games) < 3,
+            'competitions_in_sample': sorted(set(g[4] for g in games if g[4])),
             'source': 'API-Football verified fixture expected_goals (mixed competitions)',
             'sample': 'last_20_available'}
         updated += 1
@@ -204,8 +210,9 @@ def main():
               f"provider_missing={c['provider_xg_missing']} retry_wait={c['retry_wait']} "
               f"api_errors={c['stats_api_failed'] + c['fixture_api_failed']}")
     print(f'xG coverage summary: verified_cache={sum(1 for v in matches.values() if isinstance(v,dict) and isinstance(v.get("home_xg"),(int,float)))} '
-          f'teams_updated={updated} teams_below_{MIN_GAMES}_games={insufficient} '
+          f'teams_updated={updated} teams_low_sample_1_2={low_sample} teams_below_{MIN_GAMES}_games={insufficient} '
           f'understat_preferred={understat_preferred} stat_request_budget={MAX_REQUESTS - remaining}/{MAX_REQUESTS}')
+    print('Domestic-league fallback: existing Understat team records retained and available to European fixtures via normalized team names.')
     print('Only actual provider TEAM xG is used; player xG/90 is not generated.')
 
 
