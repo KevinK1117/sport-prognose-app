@@ -1465,6 +1465,33 @@ def football_form_probability(player, stats):
     return round(min(99.,max(0.,base*correction)),2)
 
 
+def football_data_quality(player, stats):
+    """Coverage score: missing evidence never becomes fabricated evidence."""
+    m=player.get('v2_metrics') or {}
+    checks=[('xg90',.25),('expected_minutes',.20),('opponent_xga',.20),
+            ('shots_in_box90',.15),('team_xg',.10),('team_xga',.05)]
+    coverage=sum(weight for key,weight in checks if isinstance(m.get(key),(int,float)) and math.isfinite(m[key]))
+    if stats and stats.get('played',0)>=10: coverage+=.05
+    elif stats and stats.get('played',0)>=3: coverage+=.025
+    return round(min(1.,coverage),3)
+
+
+def football_combo_rank(player,stats,base_score):
+    """Prioritize strong scorers with defensible football evidence."""
+    m=player.get('v2_metrics') or {}
+    quality=football_data_quality(player,stats)
+    # Missing context is neutral; verified context modifies ranking only.
+    bonus=0.
+    box=m.get('shots_in_box90')
+    if isinstance(box,(int,float)) and math.isfinite(box): bonus+=min(5.,max(0.,box))*2.4
+    xga=m.get('opponent_xga')
+    if isinstance(xga,(int,float)) and math.isfinite(xga): bonus+=min(3.,max(0.,xga))*1.8
+    team_xg=m.get('team_xg')
+    if isinstance(team_xg,(int,float)) and math.isfinite(team_xg): bonus+=min(3.,max(0.,team_xg))*1.4
+    # Reliability is a modest multiplier, not an assertion of certainty.
+    return round((base_score+bonus)*(.82+.18*quality),3)
+
+
 def combo_evidence_score(player, stats):
     """Evidence-based ranking score, not a calibrated probability.
 
@@ -1528,6 +1555,8 @@ def combo_evidence_score(player, stats):
     goalie=metrics.get('goalie_factor')
     if isinstance(goalie,(int,float)) and math.isfinite(goalie) and goalie>0:
         score*=max(.85,min(1.15,goalie))
+    if player.get('sport')=='football':
+        return football_combo_rank(player,stats,score)
     return round(score,3)
 
 
@@ -1738,12 +1767,14 @@ def render_form_combo(picks, view_key="default"):
                 f'<div class="sr-football-criterion"><small>{html.escape(label)}</small><strong>{html.escape(value)}</strong></div>'
                 for label,value in [
                     ('⚽ xG / 90',fval('xg90')),('🕒 Erwartete Minuten',fval('expected_minutes')),
-                    ('🛡️ Gegner / xGA',fval('opponent_factor')),
+                    ('🛡️ Gegner-xGA / Spiel',fval('opponent_xga')),
                     (f'🔥 Form letzte {form["played"]} Spiele',f'{form.get("goals",0)} Tore'),
                     ('🎯 Schüsse im Strafraum / 90',fval('shots_in_box90')),
                     ('📈 Gewichtete Schüsse / Spiel',weighted_label),
                     ('🥅 Elfmeterrolle','Bestätigt' if m.get('penalty_taker')==1 or p.get('penalty_taker') is True else 'Nicht bestätigt'),
-                    ('⚽ Team-xG',fval('team_xg'))]
+                    ('⚽ Team-xG',fval('team_xg')),
+                    ('🛡️ Team-xGA',fval('team_xga')),
+                    ('📋 Datenabdeckung',f'{football_data_quality(p,form)*100:.0f} %')]
             )+'</div>',unsafe_allow_html=True)
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
@@ -1788,7 +1819,7 @@ def combo_view(day,sport,league):
         mode="football" if sport_mode.startswith("⚽") else "hockey"
         amount=st.select_slider("Gewünschte Anzahl Tipps",options=[6,7,8,9,10],value=7,key="daily_all_leagues_amount")
         st.caption(f"{day.strftime('%d.%m.%Y')} · Alle Ligen der gewählten Sportart · Torschütze im Gesamtspiel")
-        st.caption("Nur grüne Kandidaten mit überprüfbarer Form aus bis zu 20 Einsätzen; maximal zwei Tipps pro Begegnung.")
+        st.caption("6–10 Torschützen · xG, Gegner-xGA, Schussqualität, Minuten und Datenabdeckung für die Rangfolge; maximal zwei Tipps pro Begegnung.")
         request=(str(day),mode)
         if st.button("📅 Form-Tages-Kombi berechnen",key=f"daily_all_{day}"):
             st.session_state["daily_all_request"]=request
