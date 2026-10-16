@@ -274,6 +274,31 @@ st.markdown("""<style>
 .sr-metric-highlight strong{display:block;font-size:1.25rem;font-weight:900;margin-top:6px}
 </style>""",unsafe_allow_html=True)
 
+def football_criteria_tiles(p, form):
+    """Shared compact football evidence tiles for forecasts and combo bets."""
+    m=p.get('v2_metrics') or {}
+    def fval(key,unit=''):
+        v=m.get(key)
+        return (f'{v:.2f}'.replace('.',',')+unit) if isinstance(v,(int,float)) else 'Nicht verfügbar'
+    weighted=form.get('weighted_shots_game')
+    weighted_label=f'{weighted:.2f}'.replace('.',',') if isinstance(weighted,(int,float)) else 'Nicht verfügbar'
+    return '<div class="sr-football-criteria">'+''.join(
+        f'<div class="sr-football-criterion"><small>{html.escape(label)}</small><strong>{html.escape(value)}</strong></div>'
+        for label,value in [
+            ('⚽ npxG / 90',fval('npxg90')),('⚽ xG / 90',fval('xg90')),('🕒 Erwartete Minuten',fval('expected_minutes')),
+            ('🛡️ Gegner-xGA / Spiel',fval('opponent_xga')),
+            (f'🔥 Form letzte {form.get("played",0)} Spiele',f'{form.get("goals",0)} Tore'),
+            ('🎯 Schüsse im Strafraum / 90',fval('shots_in_box90')),
+            ('📈 Gewichtete Schüsse / Spiel',weighted_label),
+            ('🥅 Elfmeterrolle','Bestätigt' if m.get('penalty_taker')==1 or p.get('penalty_taker') is True else 'Nicht bestätigt'),
+            ('⚽ Team-xG',fval('team_xg')),
+            ('🛡️ Team-xGA',fval('team_xga')),
+            ('📚 Team-xG Datenbasis',str(m.get('team_xg_games'))+' Spiele · '+str(m.get('team_xg_competition') or 'Wettbewerb unbekannt') if m.get('team_xg_games') is not None else 'Nicht verfügbar'),
+            ('📚 Gegner-xGA Datenbasis',str(m.get('opponent_xga_games'))+' Spiele · '+str(m.get('opponent_xga_competition') or 'Wettbewerb unbekannt') if m.get('opponent_xga_games') is not None else 'Nicht verfügbar'),
+            ('📋 Datenabdeckung',f'{football_data_quality(p,form)*100:.0f} %'),('🏅 Historischer Signalwert',f'{football_historical_signal(p,form):.1f} / 97')]
+    )+'</div>'
+
+
 def spotlight_metrics(player, sport, form=None):
     """Emphasize only real supplied metrics; never substitute invented xG or ice time."""
     def tile(label,value,kind='',missing=False):
@@ -598,7 +623,7 @@ def show_player(player,period_label,sport="hockey",form_stats=None,show_form=Fal
     else:
         data_notes.append("PP1 und Starting Goalie nur bei bestätigten Daten; PP-Eiszeit und High-Danger-Schüsse aus MoneyPuck, sofern verfügbar")
     notes_html='<div class="sr-data-note">'+' · '.join(html.escape(x) for x in data_notes)+'</div>'
-    highlights_html=spotlight_metrics(player,sport,form_stats)
+    highlights_html=(football_criteria_tiles(player,form_stats or {}) if sport=="football" else spotlight_metrics(player,sport,form_stats))
     if sport=='football' and form_stats and player.get('v2_model'):
         updated=football_form_probability(player,form_stats)
         if isinstance(updated,(int,float)) and updated!=player.get('p'):
@@ -1811,33 +1836,14 @@ def render_form_combo(picks, view_key="default"):
         st.markdown(f'<div class="sr-combo-probs"><div><small>{period_name}</small><strong>{pct(period_value)}</strong></div><div><small>Gesamtspiel</small><strong>{pct(p["adjusted_p"])}</strong></div></div>',unsafe_allow_html=True)
         st.caption(f'🕒 Spielbeginn {datetime.fromisoformat(p["kickoff"]).strftime("%H:%M")} Uhr · {p["match"]} · Gesamtspiel (formangepasst): {pct(p["adjusted_p"])} · Saisonmodell: {pct(p["p"])}{period_detail}')
         st.caption(f'🏒 Letzte {form["played"]} Einsätze: {form["goals"]} Tore · {form["shots"]} Schüsse · Ø {avg_minutes:.1f} Min. {unit} · Position: {p.get("position") or "Unbekannt"}')
-        st.markdown(spotlight_metrics(p, p["sport"], form), unsafe_allow_html=True)
+        if p.get("sport")!="football":
+            st.markdown(spotlight_metrics(p, p["sport"], form), unsafe_allow_html=True)
         if p.get("v2_model"): st.caption("📊 Datenbank 2.0 · " + p["v2_model"] + " · Quelle: " + p.get("v2_source", "unbekannt"))
         if p.get("v2_as_of"): st.caption("🗓️ Statistikstand: " + p["v2_as_of"])
         st.caption("📊 Auswahlfaktoren: " + combo_evidence_caption(p,form))
         if p.get("sport")=="football": st.caption("Historisch priorisierter Signalwert: xG/npxG, Einsatzminuten, Strafraum-Schüsse, Gegner-xGA, Team-xG. Heuristische Rangfolge – keine kalibrierte Wettwahrscheinlichkeit.")
-        if p['sport']=='football':
-            m=p.get('v2_metrics') or {}
-            def fval(key,unit=''):
-                v=m.get(key)
-                return (f'{v:.2f}'.replace('.',',')+unit) if isinstance(v,(int,float)) else 'Nicht verfügbar'
-            weighted=form.get('weighted_shots_game')
-            weighted_label=f'{weighted:.2f}'.replace('.',',') if isinstance(weighted,(int,float)) else 'Nicht verfügbar'
-            st.markdown('<div class="sr-football-criteria">'+''.join(
-                f'<div class="sr-football-criterion"><small>{html.escape(label)}</small><strong>{html.escape(value)}</strong></div>'
-                for label,value in [
-                    ('⚽ npxG / 90',fval('npxg90')),('⚽ xG / 90',fval('xg90')),('🕒 Erwartete Minuten',fval('expected_minutes')),
-                    ('🛡️ Gegner-xGA / Spiel',fval('opponent_xga')),
-                    (f'🔥 Form letzte {form["played"]} Spiele',f'{form.get("goals",0)} Tore'),
-                    ('🎯 Schüsse im Strafraum / 90',fval('shots_in_box90')),
-                    ('📈 Gewichtete Schüsse / Spiel',weighted_label),
-                    ('🥅 Elfmeterrolle','Bestätigt' if m.get('penalty_taker')==1 or p.get('penalty_taker') is True else 'Nicht bestätigt'),
-                    ('⚽ Team-xG',fval('team_xg')),
-                    ('🛡️ Team-xGA',fval('team_xga')),
-                    ('📚 Team-xG Datenbasis',str(m.get('team_xg_games'))+' Spiele · '+str(m.get('team_xg_competition') or 'Wettbewerb unbekannt') if m.get('team_xg_games') is not None else 'Nicht verfügbar'),
-                    ('📚 Gegner-xGA Datenbasis',str(m.get('opponent_xga_games'))+' Spiele · '+str(m.get('opponent_xga_competition') or 'Wettbewerb unbekannt') if m.get('opponent_xga_games') is not None else 'Nicht verfügbar'),
-                    ('📋 Datenabdeckung',f'{football_data_quality(p,form)*100:.0f} %'),('🏅 Historischer Signalwert',f'{football_historical_signal(p,form):.1f} / 97')]
-            )+'</div>',unsafe_allow_html=True)
+        if p.get('sport')=='football':
+            st.markdown(football_criteria_tiles(p,form),unsafe_allow_html=True)
         favorite_button(p,f"combo_{view_key}_{index}_{p.get('league')}")
         combo_player_details(p,datetime.fromisoformat(p["kickoff"]).date(),f"{view_key}_{index}_{p.get('league')}_{p.get('player_id') or normalize_team(p['name'])}")
     st.metric("Ausgewählte Tipps",len(picks))
@@ -2335,4 +2341,14 @@ st.markdown("""<style>
 .sr-football-criterion small{display:block;font-size:.85rem;font-weight:750;line-height:1.35}
 .sr-football-criterion strong{display:block;font-size:1.25rem;font-weight:900;margin-top:10px;overflow-wrap:anywhere}
 @media(max-width:430px){.sr-metric-highlights,.sr-football-criteria{gap:9px!important}.sr-metric-highlight,.sr-football-criterion{padding:12px 10px!important;min-height:89px!important}}
+</style>""",unsafe_allow_html=True)
+
+# Compact, mobile-first football evidence cards in forecasts and combination bets.
+st.markdown("""<style>
+.sr-football-criteria{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;margin:8px 0!important}
+.sr-football-criterion{padding:7px 8px!important;min-height:0!important;border-width:1px!important;border-radius:9px!important;box-sizing:border-box!important}
+.sr-football-criterion small{font-size:.68rem!important;line-height:1.2!important;font-weight:700!important}
+.sr-football-criterion strong{font-size:.91rem!important;line-height:1.2!important;margin-top:4px!important;font-weight:800!important;overflow-wrap:anywhere!important}
+.sr-pred-details .sr-football-criteria{margin:7px 0!important}
+@media(max-width:430px){.sr-football-criteria{gap:5px!important}.sr-football-criterion{padding:6px 7px!important}.sr-football-criterion strong{font-size:.84rem!important}}
 </style>""",unsafe_allow_html=True)
