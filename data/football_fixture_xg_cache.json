@@ -64,9 +64,15 @@
       "source": "API-Football /fixtures/statistics"
     },
     "1635741": {
-      "unavailable": true,
       "competition": "Champions League",
-      "date": "2026-09-09T16:45:00+00:00"
+      "date": "2026-09-09T16:45:00+00:00",
+      "home": "VfB Stuttgart",
+      "away": "Viking",
+      "home_id": 172,
+      "away_id": 759,
+      "home_xg": 2.18,
+      "away_xg": 0.63,
+      "source": "API-Football /fixtures/statistics"
     },
     "1636312": {
       "competition": "Europa League",
@@ -150,9 +156,15 @@
       "source": "API-Football /fixtures/statistics"
     },
     "1635628": {
-      "unavailable": true,
       "competition": "Champions League",
-      "date": "2026-09-09T16:45:00+00:00"
+      "date": "2026-09-09T16:45:00+00:00",
+      "home": "Barcelona",
+      "away": "Feyenoord",
+      "home_id": 529,
+      "away_id": 209,
+      "home_xg": 2.1,
+      "away_xg": 0.53,
+      "source": "API-Football /fixtures/statistics"
     },
     "1636217": {
       "unavailable": true,
@@ -4102,13 +4114,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-21T17:00:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1607561": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-05T18:15:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1603003": {
       "competition": "Saudi Pro League",
@@ -4202,13 +4214,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-21T18:00:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1607175": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T15:00:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1603005": {
       "competition": "Saudi Pro League",
@@ -4302,13 +4314,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-21T18:00:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1598830": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T16:00:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1603006": {
       "competition": "Saudi Pro League",
@@ -4402,13 +4414,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-21T18:30:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1607563": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T16:00:00+00:00",
-      "checked_at": "2026-10-21"
+      "checked_at": "2026-11-04"
     },
     "1603007": {
       "competition": "Saudi Pro League",
@@ -9578,7 +9590,367 @@
       "competition": "Europa League",
       "date": "2026-09-17T19:00:00+00:00",
       "checked_at": "2026-11-03"
+    },
+    "1490451": {
+      "competition": "MLS",
+      "date": "2026-09-09T23:45:00+00:00",
+      "home": "Philadelphia Union",
+      "away": "FC Cincinnati",
+      "home_id": 1599,
+      "away_id": 2242,
+      "home_xg": 3.57,
+      "away_xg": 0.02,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490455": {
+      "competition": "MLS",
+      "date": "2026-09-10T00:00:00+00:00",
+      "home": "New York City FC",
+      "away": "New England Revolution",
+      "home_id": 1604,
+      "away_id": 1609,
+      "home_xg": 1.13,
+      "away_xg": 2.38,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490460": {
+      "competition": "MLS",
+      "date": "2026-09-10T00:30:00+00:00",
+      "home": "Houston Dynamo",
+      "away": "Real Salt Lake",
+      "home_id": 1600,
+      "away_id": 1606,
+      "home_xg": 1.03,
+      "away_xg": 1.21,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490457": {
+      "competition": "MLS",
+      "date": "2026-09-10T00:30:00+00:00",
+      "home": "Chicago Fire",
+      "away": "Inter Miami",
+      "home_id": 1607,
+      "away_id": 9568,
+      "home_xg": 1.17,
+      "away_xg": 1.58,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490458": {
+      "competition": "MLS",
+      "date": "2026-09-10T00:30:00+00:00",
+      "home": "Minnesota United FC",
+      "away": "FC Dallas",
+      "home_id": 1612,
+      "away_id": 1597,
+      "home_xg": 1.04,
+      "away_xg": 2.31,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635609": {
+      "competition": "Champions League",
+      "date": "2026-09-08T16:45:00+00:00",
+      "home": "AEK Athens FC",
+      "away": "Lask Linz",
+      "home_id": 575,
+      "away_id": 1026,
+      "home_xg": 1.71,
+      "away_xg": 0.72,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636287": {
+      "unavailable": true,
+      "competition": "Europa League",
+      "date": "2026-09-17T19:00:00+00:00",
+      "checked_at": "2026-11-04"
+    },
+    "1490459": {
+      "competition": "MLS",
+      "date": "2026-09-10T00:30:00+00:00",
+      "home": "Austin",
+      "away": "Colorado Rapids",
+      "home_id": 16489,
+      "away_id": 1610,
+      "home_xg": 0.92,
+      "away_xg": 0.66,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635683": {
+      "competition": "Champions League",
+      "date": "2026-09-08T19:00:00+00:00",
+      "home": "Lille",
+      "away": "Real Betis",
+      "home_id": 79,
+      "away_id": 543,
+      "home_xg": 0.83,
+      "away_xg": 1.8,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636278": {
+      "unavailable": true,
+      "competition": "Europa League",
+      "date": "2026-09-17T19:00:00+00:00",
+      "checked_at": "2026-11-04"
+    },
+    "1490462": {
+      "competition": "MLS",
+      "date": "2026-09-10T02:30:00+00:00",
+      "home": "Vancouver Whitecaps",
+      "away": "Los Angeles Galaxy",
+      "home_id": 1603,
+      "away_id": 1605,
+      "home_xg": 2.37,
+      "away_xg": 0.66,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635652": {
+      "competition": "Champions League",
+      "date": "2026-09-08T19:00:00+00:00",
+      "home": "Borussia Dortmund",
+      "away": "Villarreal",
+      "home_id": 165,
+      "away_id": 533,
+      "home_xg": 2.83,
+      "away_xg": 1.34,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636321": {
+      "unavailable": true,
+      "competition": "Europa League",
+      "date": "2026-09-17T19:00:00+00:00",
+      "checked_at": "2026-11-04"
+    },
+    "1490461": {
+      "competition": "MLS",
+      "date": "2026-09-10T02:30:00+00:00",
+      "home": "Los Angeles FC",
+      "away": "New York Red Bulls",
+      "home_id": 1616,
+      "away_id": 1602,
+      "home_xg": 1.44,
+      "away_xg": 0.43,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635654": {
+      "competition": "Champions League",
+      "date": "2026-09-08T19:00:00+00:00",
+      "home": "FC Porto",
+      "away": "Manchester City",
+      "home_id": 212,
+      "away_id": 50,
+      "home_xg": 0.28,
+      "away_xg": 2.32,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636232": {
+      "unavailable": true,
+      "competition": "Europa League",
+      "date": "2026-09-17T19:00:00+00:00",
+      "checked_at": "2026-11-04"
+    },
+    "1490465": {
+      "competition": "MLS",
+      "date": "2026-09-10T02:30:00+00:00",
+      "home": "Portland Timbers",
+      "away": "St. Louis City",
+      "home_id": 1617,
+      "away_id": 20787,
+      "home_xg": 0.92,
+      "away_xg": 1.86,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635714": {
+      "competition": "Champions League",
+      "date": "2026-09-08T19:00:00+00:00",
+      "home": "Real Madrid",
+      "away": "Inter",
+      "home_id": 541,
+      "away_id": 505,
+      "home_xg": 2.91,
+      "away_xg": 1.83,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636316": {
+      "unavailable": true,
+      "competition": "Europa League",
+      "date": "2026-09-17T19:00:00+00:00",
+      "checked_at": "2026-11-04"
+    },
+    "1490464": {
+      "competition": "MLS",
+      "date": "2026-09-10T02:30:00+00:00",
+      "home": "San Diego",
+      "away": "San Jose Earthquakes",
+      "home_id": 25484,
+      "away_id": 1596,
+      "home_xg": 1.94,
+      "away_xg": 2.16,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636293": {
+      "competition": "Europa League",
+      "date": "2026-10-15T16:45:00+00:00",
+      "home": "Lyon",
+      "away": "Crystal Palace",
+      "home_id": 80,
+      "away_id": 52,
+      "home_xg": 2.05,
+      "away_xg": 1.55,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490469": {
+      "competition": "MLS",
+      "date": "2026-09-12T23:30:00+00:00",
+      "home": "Orlando City SC",
+      "away": "Toronto FC",
+      "home_id": 1598,
+      "away_id": 1601,
+      "home_xg": 2.05,
+      "away_xg": 2.51,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636222": {
+      "competition": "Europa League",
+      "date": "2026-10-15T16:45:00+00:00",
+      "home": "AZ Alkmaar",
+      "away": "Hapoel Beer Sheva",
+      "home_id": 201,
+      "away_id": 563,
+      "home_xg": 2.75,
+      "away_xg": 1.09,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490467": {
+      "competition": "MLS",
+      "date": "2026-09-12T23:30:00+00:00",
+      "home": "Columbus Crew",
+      "away": "New York Red Bulls",
+      "home_id": 1613,
+      "away_id": 1602,
+      "home_xg": 1.47,
+      "away_xg": 1.43,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635736": {
+      "competition": "Champions League",
+      "date": "2026-09-09T19:00:00+00:00",
+      "home": "Sporting CP",
+      "away": "Galatasaray",
+      "home_id": 228,
+      "away_id": 645,
+      "home_xg": 1.75,
+      "away_xg": 1.23,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636279": {
+      "competition": "Europa League",
+      "date": "2026-10-15T16:45:00+00:00",
+      "home": "Lech Poznan",
+      "away": "Bayer Leverkusen",
+      "home_id": 347,
+      "away_id": 168,
+      "home_xg": 0.57,
+      "away_xg": 5.22,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490470": {
+      "competition": "MLS",
+      "date": "2026-09-12T23:30:00+00:00",
+      "home": "DC United",
+      "away": "Atlanta United FC",
+      "home_id": 1615,
+      "away_id": 1608,
+      "home_xg": 0.21,
+      "away_xg": 1.42,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635698": {
+      "competition": "Champions League",
+      "date": "2026-09-09T19:00:00+00:00",
+      "home": "Napoli",
+      "away": "Arsenal",
+      "home_id": 492,
+      "away_id": 42,
+      "home_xg": 0.22,
+      "away_xg": 4.05,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636332": {
+      "competition": "Europa League",
+      "date": "2026-10-15T16:45:00+00:00",
+      "home": "Red Bull Salzburg",
+      "away": "AC Milan",
+      "home_id": 571,
+      "away_id": 489,
+      "home_xg": 0.89,
+      "away_xg": 3.45,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490468": {
+      "competition": "MLS",
+      "date": "2026-09-12T23:30:00+00:00",
+      "home": "FC Cincinnati",
+      "away": "Charlotte",
+      "home_id": 2242,
+      "away_id": 18310,
+      "home_xg": 2.44,
+      "away_xg": 1.59,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635708": {
+      "competition": "Champions League",
+      "date": "2026-09-10T16:45:00+00:00",
+      "home": "PSV Eindhoven",
+      "away": "Shakhtar Donetsk",
+      "home_id": 197,
+      "away_id": 550,
+      "home_xg": 0.44,
+      "away_xg": 0.62,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636338": {
+      "competition": "Europa League",
+      "date": "2026-10-15T16:45:00+00:00",
+      "home": "Sparta Praha",
+      "away": "Lillestrom",
+      "home_id": 628,
+      "away_id": 321,
+      "home_xg": 1.12,
+      "away_xg": 0.84,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1490466": {
+      "competition": "MLS",
+      "date": "2026-09-12T23:30:00+00:00",
+      "home": "Inter Miami",
+      "away": "Nashville SC",
+      "home_id": 9568,
+      "away_id": 9569,
+      "home_xg": 1.62,
+      "away_xg": 2.41,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1635659": {
+      "competition": "Champions League",
+      "date": "2026-09-10T16:45:00+00:00",
+      "home": "Fenerbahçe",
+      "away": "AS Roma",
+      "home_id": 611,
+      "away_id": 497,
+      "home_xg": 1.57,
+      "away_xg": 0.48,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1636328": {
+      "competition": "Europa League",
+      "date": "2026-10-15T16:45:00+00:00",
+      "home": "Union St. Gilloise",
+      "away": "Real Sociedad",
+      "home_id": 1393,
+      "away_id": 548,
+      "home_xg": 1.92,
+      "away_xg": 0.76,
+      "source": "API-Football /fixtures/statistics"
     }
   },
-  "updated_at": "2026-11-03T08:16:32.720445+00:00"
+  "updated_at": "2026-11-04T08:17:27.009558+00:00"
 }
