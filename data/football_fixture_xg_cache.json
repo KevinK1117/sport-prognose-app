@@ -2760,7 +2760,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-23T19:00:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1602992": {
       "competition": "Saudi Pro League",
@@ -2860,7 +2860,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T16:00:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1602993": {
       "competition": "Saudi Pro League",
@@ -2943,7 +2943,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-07-25T23:30:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1554385": {
       "unavailable": true,
@@ -2955,7 +2955,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T17:00:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1602994": {
       "competition": "Saudi Pro League",
@@ -3055,7 +3055,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T17:00:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1602995": {
       "competition": "Saudi Pro League",
@@ -8858,13 +8858,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-18T19:00:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1627596": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-27T18:00:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1603073": {
       "competition": "Saudi Pro League",
@@ -8903,7 +8903,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-08-30T00:30:00+00:00",
-      "checked_at": "2026-11-01"
+      "checked_at": "2026-11-15"
     },
     "1575203": {
       "competition": "Bundesliga",
@@ -13323,5 +13323,5 @@
       "source": "API-Football /fixtures/statistics"
     }
   },
-  "updated_at": "2026-11-14T14:01:48.194444+00:00"
+  "updated_at": "2026-11-15T14:38:16.768466+00:00"
 }
