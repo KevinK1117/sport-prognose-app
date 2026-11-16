@@ -170,7 +170,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-09-16T16:45:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1603024": {
       "competition": "Saudi Pro League",
@@ -3210,7 +3210,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T17:00:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1602996": {
       "competition": "Saudi Pro League",
@@ -3310,7 +3310,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T17:45:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1602997": {
       "competition": "Saudi Pro League",
@@ -3410,7 +3410,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T18:00:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1602998": {
       "competition": "Saudi Pro League",
@@ -3510,7 +3510,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-07-30T18:30:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1602999": {
       "competition": "Saudi Pro League",
@@ -9217,13 +9217,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-19T19:00:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1623442": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-27T18:30:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1490435": {
       "competition": "MLS",
@@ -9240,13 +9240,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-19T19:00:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1623445": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-27T18:30:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1490436": {
       "competition": "MLS",
@@ -9263,7 +9263,7 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-19T19:00:00+00:00",
-      "checked_at": "2026-11-02"
+      "checked_at": "2026-11-16"
     },
     "1570436": {
       "competition": "La Liga",
@@ -13323,5 +13323,5 @@
       "source": "API-Football /fixtures/statistics"
     }
   },
-  "updated_at": "2026-11-15T14:38:16.768466+00:00"
+  "updated_at": "2026-11-16T16:53:57.758937+00:00"
 }
