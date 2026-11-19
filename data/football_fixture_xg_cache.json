@@ -4575,7 +4575,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T17:00:00+00:00",
-      "checked_at": "2026-11-05"
+      "checked_at": "2026-11-19"
     },
     "1603008": {
       "competition": "Saudi Pro League",
@@ -4675,7 +4675,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T17:00:00+00:00",
-      "checked_at": "2026-11-05"
+      "checked_at": "2026-11-19"
     },
     "1603009": {
       "competition": "Saudi Pro League",
@@ -4775,7 +4775,7 @@
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T17:00:00+00:00",
-      "checked_at": "2026-11-05"
+      "checked_at": "2026-11-19"
     },
     "1603010": {
       "competition": "Saudi Pro League",
@@ -4869,13 +4869,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-22T17:00:00+00:00",
-      "checked_at": "2026-11-05"
+      "checked_at": "2026-11-19"
     },
     "1607562": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-06T17:00:00+00:00",
-      "checked_at": "2026-11-05"
+      "checked_at": "2026-11-19"
     },
     "1603011": {
       "competition": "Saudi Pro League",
@@ -13323,5 +13323,5 @@
       "source": "API-Football /fixtures/statistics"
     }
   },
-  "updated_at": "2026-11-18T16:20:53.164700+00:00"
+  "updated_at": "2026-11-19T16:29:00.362535+00:00"
 }
