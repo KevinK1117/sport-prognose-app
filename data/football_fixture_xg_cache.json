@@ -5459,13 +5459,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-28T18:15:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1607567": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-13T17:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1603017": {
       "competition": "Saudi Pro League",
@@ -5548,13 +5548,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-28T18:45:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1607183": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-13T17:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1603018": {
       "competition": "Saudi Pro League",
@@ -5637,13 +5637,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-28T19:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1607182": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-13T17:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1603019": {
       "competition": "Saudi Pro League",
@@ -5726,13 +5726,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-29T15:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1607571": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-13T17:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1603020": {
       "competition": "Saudi Pro League",
@@ -5815,13 +5815,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-07-29T16:00:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1607184": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-13T17:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1575200": {
       "competition": "Bundesliga",
@@ -10824,25 +10824,25 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T00:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1490501": {
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T00:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1490505": {
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T00:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1490503": {
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T00:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635733": {
       "competition": "Champions League",
@@ -10870,7 +10870,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T00:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635661": {
       "competition": "Champions League",
@@ -10898,7 +10898,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T01:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635719": {
       "competition": "Champions League",
@@ -10926,7 +10926,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T02:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635688": {
       "competition": "Champions League",
@@ -10954,7 +10954,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T02:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635693": {
       "competition": "Champions League",
@@ -10982,7 +10982,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-27T02:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635702": {
       "competition": "Champions League",
@@ -11043,7 +11043,7 @@
       "unavailable": true,
       "competition": "MLS",
       "date": "2026-09-30T23:30:00+00:00",
-      "checked_at": "2026-11-07"
+      "checked_at": "2026-11-21"
     },
     "1635655": {
       "competition": "Champions League",
@@ -13321,7 +13321,95 @@
       "home_xg": 0.85,
       "away_xg": 1.98,
       "source": "API-Football /fixtures/statistics"
+    },
+    "1575221": {
+      "competition": "Bundesliga",
+      "date": "2026-11-20T19:30:00+00:00",
+      "home": "Bayern München",
+      "away": "1. FC Köln",
+      "home_id": 157,
+      "away_id": 192,
+      "home_xg": 1.12,
+      "away_xg": 2.01,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1576235": {
+      "competition": "2. Bundesliga",
+      "date": "2026-11-20T17:30:00+00:00",
+      "home": "SV Darmstadt 98",
+      "away": "1. FC Heidenheim",
+      "home_id": 181,
+      "away_id": 180,
+      "home_xg": 1.27,
+      "away_xg": 1.56,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1570454": {
+      "competition": "La Liga",
+      "date": "2026-11-20T20:00:00+00:00",
+      "home": "Athletic Club",
+      "away": "Espanyol",
+      "home_id": 531,
+      "away_id": 540,
+      "home_xg": 1.53,
+      "away_xg": 0.6,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1552827": {
+      "competition": "Ligue 1",
+      "date": "2026-11-20T19:45:00+00:00",
+      "home": "Estac Troyes",
+      "away": "Le Havre",
+      "home_id": 110,
+      "away_id": 111,
+      "home_xg": 2.68,
+      "away_xg": 0.65,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1603044": {
+      "competition": "Saudi Pro League",
+      "date": "2026-11-20T17:30:00+00:00",
+      "home": "Al-Ahli Jeddah",
+      "away": "Al-Nassr",
+      "home_id": 2929,
+      "away_id": 2939,
+      "home_xg": 2.25,
+      "away_xg": 2.42,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1576233": {
+      "competition": "2. Bundesliga",
+      "date": "2026-11-20T17:30:00+00:00",
+      "home": "Arminia Bielefeld",
+      "away": "1. FC Magdeburg",
+      "home_id": 188,
+      "away_id": 179,
+      "home_xg": 1.55,
+      "away_xg": 0.94,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1649491": {
+      "competition": "MLS",
+      "date": "2026-11-20T00:30:00+00:00",
+      "home": "Orlando City SC",
+      "away": "FC Cincinnati",
+      "home_id": 1598,
+      "away_id": 2242,
+      "home_xg": 2.99,
+      "away_xg": 1.7,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1649492": {
+      "competition": "MLS",
+      "date": "2026-11-20T03:00:00+00:00",
+      "home": "Seattle Sounders",
+      "away": "Real Salt Lake",
+      "home_id": 1595,
+      "away_id": 1606,
+      "home_xg": 3.24,
+      "away_xg": 0.91,
+      "source": "API-Football /fixtures/statistics"
     }
   },
-  "updated_at": "2026-11-20T16:00:33.473019+00:00"
+  "updated_at": "2026-11-21T15:12:54.379719+00:00"
 }
