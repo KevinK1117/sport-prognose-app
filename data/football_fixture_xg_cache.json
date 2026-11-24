@@ -6798,13 +6798,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-04T17:30:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1623436": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-20T16:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1603031": {
       "competition": "Saudi Pro League",
@@ -6887,13 +6887,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-04T17:30:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1627595": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-20T17:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1603027": {
       "competition": "Saudi Pro League",
@@ -6976,13 +6976,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-04T18:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1623432": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-20T17:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1603041": {
       "competition": "Saudi Pro League",
@@ -7065,13 +7065,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-04T18:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1623440": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-20T17:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1603037": {
       "competition": "Saudi Pro League",
@@ -7154,13 +7154,13 @@
       "unavailable": true,
       "competition": "Champions League",
       "date": "2026-08-04T18:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1623439": {
       "unavailable": true,
       "competition": "Europa League",
       "date": "2026-08-20T17:00:00+00:00",
-      "checked_at": "2026-11-10"
+      "checked_at": "2026-11-24"
     },
     "1603042": {
       "competition": "Saudi Pro League",
@@ -14003,7 +14003,51 @@
       "home_xg": 2.96,
       "away_xg": 3.4,
       "source": "API-Football /fixtures/statistics"
+    },
+    "1570457": {
+      "competition": "La Liga",
+      "date": "2026-11-23T20:00:00+00:00",
+      "home": "Levante",
+      "away": "Elche",
+      "home_id": 539,
+      "away_id": 797,
+      "home_xg": 0.85,
+      "away_xg": 0.43,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1550203": {
+      "competition": "Serie A",
+      "date": "2026-11-23T19:45:00+00:00",
+      "home": "Monza",
+      "away": "Fiorentina",
+      "home_id": 1579,
+      "away_id": 502,
+      "home_xg": 1.66,
+      "away_xg": 1.8,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1557469": {
+      "competition": "Premier League",
+      "date": "2026-11-23T20:00:00+00:00",
+      "home": "Brentford",
+      "away": "Everton",
+      "home_id": 55,
+      "away_id": 45,
+      "home_xg": 2.61,
+      "away_xg": 0.25,
+      "source": "API-Football /fixtures/statistics"
+    },
+    "1651120": {
+      "competition": "MLS",
+      "date": "2026-11-23T01:30:00+00:00",
+      "home": "Vancouver Whitecaps",
+      "away": "Real Salt Lake",
+      "home_id": 1603,
+      "away_id": 1606,
+      "home_xg": 2.26,
+      "away_xg": 1.14,
+      "source": "API-Football /fixtures/statistics"
     }
   },
-  "updated_at": "2026-11-23T19:07:15.944157+00:00"
+  "updated_at": "2026-11-24T18:47:22.307501+00:00"
 }
